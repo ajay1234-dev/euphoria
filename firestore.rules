@@ -1,0 +1,247 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ───────── Helpers ─────────
+    function signedIn() { return request.auth != null; }
+    function isAdmin()  { return signedIn() && request.auth.token.admin == true; }
+    function cfg()      { return get(/databases/$(database)/documents/config/app).data; }
+
+    function emailLower()  { return request.auth.token.email.lower(); }
+    function emailDomain() { return emailLower().split('@')[1]; }
+    function emailLocal()  { return emailLower().split('@')[0]; }
+
+    function hasAllowedEmail() {
+      return signedIn()
+        && request.auth.token.email is string
+        && (!exists(/databases/$(database)/documents/config/app)
+            || emailDomain() in cfg().allowedEmailDomains
+            || emailDomain() == 'msec.edu.in'
+            || emailDomain() == 'student.msec.edu.in')
+        && (!exists(/databases/$(database)/documents/config/app) || cfg().blockPlusAddressing == false || !emailLocal().matches('.*[+].*'));
+    }
+    function isVerifiedStudent() {
+      return hasAllowedEmail() && request.auth.token.email_verified == true;
+    }
+    function isAdminOrStudent() { return isAdmin() || isVerifiedStudent(); }
+
+    function isStr(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function createStamps(d) { return d.createdAt == request.time && d.updatedAt == request.time; }
+    function updateStamps(d) { return d.createdAt == resource.data.createdAt && d.updatedAt == request.time; }
+
+    // ───────── Validators ─────────
+    function validConfig(d) {
+      return d.keys().hasOnly(['festName','activeEventId','allowedEmailDomains','blockPlusAddressing','requireStudentId','studentIdPattern','registrationOpen','sections','updatedAt'])
+        && d.keys().hasAll(['festName','activeEventId','allowedEmailDomains','blockPlusAddressing','requireStudentId','studentIdPattern','registrationOpen','updatedAt'])
+        && isStr(d.festName, 2, 80)
+        && isStr(d.activeEventId, 1, 64)
+        && d.allowedEmailDomains is list && d.allowedEmailDomains.size() >= 1 && d.allowedEmailDomains.size() <= 10
+        && d.blockPlusAddressing is bool
+        && d.requireStudentId is bool
+        && (d.studentIdPattern == null || isStr(d.studentIdPattern, 1, 200))
+        && d.registrationOpen is bool
+        && (!('sections' in d) || (d.sections is list && d.sections.size() >= 1 && d.sections.size() <= 20))
+        && d.updatedAt == request.time;
+    }
+
+    function validNewStudent(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['uid','name','email','registerNumber','year','departmentCode','department','section','role','registrationStatus','registeredAt','updatedAt'])
+        && d.keys().hasAll(['uid','name','email','registerNumber','year','departmentCode','department','section','role','registrationStatus','registeredAt','updatedAt'])
+        && d.uid == uid
+        && isStr(d.name, 2, 100)
+        && d.email == emailLower()
+        && d.registerNumber is string && d.registerNumber.matches('^[0-9]{12}$')
+        && d.year is int && d.year >= 1 && d.year <= 4
+        && d.departmentCode is string && d.departmentCode in ['103', '104', '105', '106', '205', '243', '114']
+        && d.registerNumber.matches('^[0-9]{6}' + d.departmentCode + '[0-9]{3}$')
+        && isStr(d.department, 2, 100)
+        && isStr(d.section, 1, 10)
+        && d.role == 'student'
+        && d.registrationStatus == 'registered'
+        && d.registeredAt == request.time
+        && d.updatedAt == request.time;
+    }
+
+    function validNewUser(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['uid','fullName','name','email','emailDomain','studentId','departmentId','department','departmentCode','registerNumber','year','section','role','registrationStatus','emailVerified','verifiedAt','createdAt','registeredAt','updatedAt'])
+        && d.keys().hasAll(['uid','fullName','email','emailDomain','studentId','departmentId','emailVerified','verifiedAt','createdAt'])
+        && d.uid == uid
+        && isStr(d.fullName, 2, 80)
+        && (!('name' in d) || isStr(d.name, 2, 100))
+        && d.email == emailLower()
+        && d.emailDomain == emailDomain()
+        && d.emailVerified == (request.auth.token.email_verified == true)
+        && (d.verifiedAt == null || d.verifiedAt == request.time)
+        && d.createdAt == request.time
+        && (!('registeredAt' in d) || d.registeredAt == null || d.registeredAt == request.time)
+        && (!('updatedAt' in d) || d.updatedAt == null || d.updatedAt == request.time)
+        && (d.departmentId == null || isStr(d.departmentId, 1, 64))
+        && (!('department' in d) || d.department == null || isStr(d.department, 1, 64))
+        && (!('year' in d) || d.year == null || (d.year is int && d.year >= 1 && d.year <= 4))
+        && (!('section' in d) || d.section == null || isStr(d.section, 1, 10))
+        && (!('role' in d) || d.role in ['student', 'admin'])
+        && (!('registrationStatus' in d) || d.registrationStatus in ['registered', 'pending'])
+        && (!exists(/databases/$(database)/documents/config/app) || cfg().requireStudentId == false || d.studentId != null)
+        && (d.studentId == null
+            || (d.studentId is string
+                && d.studentId.matches('^[A-Z0-9-]{3,30}$')
+                && getAfter(/databases/$(database)/documents/studentIdClaims/$(d.studentId)).data.uid == uid))
+        && (!('registerNumber' in d) || d.registerNumber == null
+            || (d.registerNumber is string && d.registerNumber.matches('^[0-9]{12}$')))
+        && (!('departmentCode' in d) || d.departmentCode == null
+            || (d.departmentCode is string
+                && d.departmentCode in ['103', '104', '105', '106', '205', '243', '114']
+                && ('registerNumber' in d && d.registerNumber is string
+                    && d.registerNumber.matches('^[0-9]{6}' + d.departmentCode + '[0-9]{3}$'))));
+    }
+
+    function validDepartment(d) {
+      return d.keys().hasOnly(['name','shortName','color','order','isActive','createdAt','updatedAt'])
+        && d.keys().hasAll(['name','shortName','color','order','isActive','createdAt','updatedAt'])
+        && isStr(d.name, 2, 60) && isStr(d.shortName, 1, 12)
+        && d.color is string && d.color.matches('^#[0-9A-Fa-f]{6}$')
+        && d.order is int && d.order >= 0 && d.isActive is bool;
+    }
+
+    function validCategory(d) {
+      return d.keys().hasOnly(['name','slug','description','order','isActive','includeInOverall','overallWeight','createdAt','updatedAt'])
+        && d.keys().hasAll(['name','slug','description','order','isActive','includeInOverall','overallWeight','createdAt','updatedAt'])
+        && isStr(d.name, 2, 60) && d.slug is string && d.slug.matches('^[a-z0-9-]{2,60}$')
+        && isStr(d.description, 0, 300)
+        && d.order is int && d.order >= 0 && d.isActive is bool
+        && d.includeInOverall is bool
+        && d.overallWeight is number && d.overallWeight >= 0 && d.overallWeight <= 10;
+    }
+
+    function validEvent(d) {
+      return d.keys().hasOnly(['name','year','isTest','status','defaultVotingDurationSeconds','resultsLocked','createdAt','updatedAt'])
+        && d.keys().hasAll(['name','year','isTest','status','defaultVotingDurationSeconds','resultsLocked','createdAt','updatedAt'])
+        && isStr(d.name, 2, 100)
+        && d.year is int && d.year >= 2000 && d.year <= 2100
+        && d.isTest is bool
+        && d.status in ['setup','live','completed']
+        && d.defaultVotingDurationSeconds is int && d.defaultVotingDurationSeconds >= 10 && d.defaultVotingDurationSeconds <= 600
+        && d.resultsLocked is bool;
+    }
+
+    function validPerformance(d) {
+      return d.keys().hasOnly(['departmentId','categoryId','name','description','order','status','votingStartedAt','votingEndsAt','createdAt','updatedAt'])
+        && d.keys().hasAll(['departmentId','categoryId','name','description','order','status','votingStartedAt','votingEndsAt','createdAt','updatedAt'])
+        && isStr(d.departmentId, 1, 64) && exists(/databases/$(database)/documents/departments/$(d.departmentId))
+        && isStr(d.categoryId, 1, 64)   && exists(/databases/$(database)/documents/categories/$(d.categoryId))
+        && isStr(d.name, 2, 100)
+        && (d.description == null || isStr(d.description, 0, 500))
+        && d.order is int && d.order >= 0 && d.order <= 1000
+        && d.status in ['scheduled','live','completed']
+        && (d.votingStartedAt == null || d.votingStartedAt is timestamp)
+        && (d.votingEndsAt == null || d.votingEndsAt is timestamp);
+    }
+
+    function validState(d) {
+      return d.keys().hasOnly(['status','activePerformanceId','votingEndsAt','updatedAt'])
+        && d.keys().hasAll(['status','activePerformanceId','votingEndsAt','updatedAt'])
+        && d.status in ['idle','open','closed']
+        && (d.activePerformanceId == null || isStr(d.activePerformanceId, 1, 64))
+        && (d.votingEndsAt == null || d.votingEndsAt is timestamp)
+        && d.updatedAt == request.time;
+    }
+
+    // ───────── Collections ─────────
+    match /config/app {
+      allow read: if true;
+      allow create, update: if isAdmin() && validConfig(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /students/{uid} {
+      allow get: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+                    && hasAllowedEmail()
+                    && (!exists(/databases/$(database)/documents/config/app) || cfg().registrationOpen == true)
+                    && validNewStudent(uid);
+      // Student profile fields are immutable post-registration. Corrections can only be performed by admin.
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /users/{uid} {
+      allow get: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+                    && hasAllowedEmail()
+                    && (!exists(/databases/$(database)/documents/config/app) || cfg().registrationOpen == true)
+                    && validNewUser(uid);
+      // Owner may only flip emailVerified false→true, and only when the token agrees.
+      allow update: if signedIn() && request.auth.uid == uid
+                    && resource.data.emailVerified == false
+                    && request.auth.token.email_verified == true
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailVerified','verifiedAt'])
+                    && request.resource.data.emailVerified == true
+                    && request.resource.data.verifiedAt == request.time;
+      allow update: if isAdmin()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName','departmentId','department','departmentCode']);
+      allow delete: if false;
+    }
+
+    match /studentIdClaims/{studentId} {
+      allow read: if isAdmin();
+      allow create: if signedIn() && hasAllowedEmail()
+                    && (!exists(/databases/$(database)/documents/config/app) || cfg().registrationOpen == true)
+                    && studentId.matches('^[A-Z0-9-]{3,30}$')
+                    && request.resource.data.keys().hasOnly(['uid','createdAt'])
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.createdAt == request.time
+                    && (getAfter(/databases/$(database)/documents/students/$(request.auth.uid)).data.registerNumber == studentId
+                        || getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == studentId);
+      allow update: if signedIn() && resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /adminDirectory/{uid} {
+      allow read: if isAdmin();
+      allow write: if false; // written only by the Admin SDK (server)
+    }
+
+    match /departments/{departmentId} {
+      allow read: if true;
+      allow create: if isAdmin() && validDepartment(request.resource.data) && createStamps(request.resource.data);
+      allow update: if isAdmin() && validDepartment(request.resource.data) && updateStamps(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if isAdminOrStudent();
+      allow create: if isAdmin() && validCategory(request.resource.data) && createStamps(request.resource.data);
+      allow update: if isAdmin() && validCategory(request.resource.data) && updateStamps(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /events/{eventId} {
+      allow read: if isAdminOrStudent();
+      allow create: if isAdmin() && validEvent(request.resource.data) && createStamps(request.resource.data);
+      allow update: if isAdmin() && validEvent(request.resource.data) && updateStamps(request.resource.data)
+                    && request.resource.data.isTest == resource.data.isTest; // isTest is immutable
+      allow delete: if false;
+
+      match /performances/{performanceId} {
+        allow read: if isAdminOrStudent();
+        allow create: if isAdmin() && validPerformance(request.resource.data) && createStamps(request.resource.data)
+                      && request.resource.data.status == 'scheduled'
+                      && request.resource.data.votingStartedAt == null && request.resource.data.votingEndsAt == null;
+        // Phase 1: admins cannot change status. Phase 2 will relax this deliberately.
+        allow update: if isAdmin() && validPerformance(request.resource.data) && updateStamps(request.resource.data)
+                      && request.resource.data.status == resource.data.status;
+        allow delete: if isAdmin() && resource.data.status == 'scheduled';
+      }
+
+      match /state/current {
+        allow read: if isAdminOrStudent();
+        allow create, update: if isAdmin() && validState(request.resource.data);
+        allow delete: if false;
+      }
+    }
+  }
+}

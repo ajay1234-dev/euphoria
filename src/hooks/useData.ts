@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { getDoc, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { configAppRef, eventRef, departmentsRef, categoriesRef, performancesRef } from "@/lib/firebase/paths";
 import type { AppConfig, FestEvent, Department, Category, Performance } from "@/types/firestore";
 
@@ -24,20 +24,21 @@ export function useAppConfig(): UseAppConfigResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (configCache.loaded) {
-      setConfig(configCache.data);
-      setLoading(false);
-      return;
-    }
-    getDoc(configAppRef())
-      .then((snap) => {
+    const unsub = onSnapshot(
+      configAppRef(),
+      (snap) => {
         const data = snap.exists() ? snap.data() : null;
         configCache.data = data;
         configCache.loaded = true;
         setConfig(data);
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+        setLoading(false);
+      },
+      (err: Error) => {
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
   }, []);
 
   return { config, loading, error };
@@ -157,24 +158,29 @@ export function usePerformances(eventId: string | null | undefined): UsePerforma
   const [performances, setPerformances] = useState<Array<Performance & { id: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const loadedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!eventId) {
       setLoading(false);
+      setPerformances([]);
       return;
     }
-    if (loadedRef.current === eventId) return;
 
     setLoading(true);
-    getDocs(query(performancesRef(eventId), orderBy("order", "asc")))
-      .then((snap) => {
+    const q = query(performancesRef(eventId), orderBy("order", "asc"));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
         const data = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
-        loadedRef.current = eventId;
         setPerformances(data);
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+        setLoading(false);
+      },
+      (err: Error) => {
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
   }, [eventId]);
 
   return { performances, loading, error };

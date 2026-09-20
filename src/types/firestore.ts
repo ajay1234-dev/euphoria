@@ -98,6 +98,20 @@ export interface Performance {
   status: PerformanceStatus;
   votingStartedAt: Timestamp | null;
   votingEndsAt: Timestamp | null;
+  // ── Phase 2 aggregation fields (written server-side on Stop & Finalize) ──────
+  totalVotes?: number;
+  rating1Count?: number;
+  rating2Count?: number;
+  rating3Count?: number;
+  rating4Count?: number;
+  rating5Count?: number;
+  totalRatingPoints?: number;
+  /** averageRating = totalRatingPoints / totalVotes  (0 if no votes) */
+  averageRating?: number;
+  /** percentageScore = (averageRating / 5) * 100  (0–100) */
+  percentageScore?: number;
+  /** Timestamp when results were permanently locked */
+  finalizedAt?: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -105,6 +119,8 @@ export interface Performance {
 export interface VotingState {
   status: "idle" | "open" | "closed";
   activePerformanceId: string | null;
+  /** Server timestamp when voting was opened (Phase 2) */
+  votingStartedAt?: Timestamp | null;
   votingEndsAt: Timestamp | null;
   updatedAt: Timestamp;
 }
@@ -115,13 +131,12 @@ export interface AdminDirectoryEntry {
   addedBy: string;
 }
 
+/**
+ * Phase 2: Minimal vote document — only the three fields the spec allows.
+ * Stored at events/{eventId}/performances/{performanceId}/votes/{studentUid}
+ */
 export interface Vote {
-  uid: string;
   studentUid: string;
   rating: number; // 1 to 5
-  departmentId?: string | null;
-  year?: number | null;
-  section?: string | null;
   createdAt: Timestamp;
-  updatedAt: Timestamp;
 }

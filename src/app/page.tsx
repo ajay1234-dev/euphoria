@@ -8,7 +8,6 @@ import { FestBackground } from "@/components/common/FestBackground";
 import { Pennants } from "@/components/common/Pennants";
 import { Logo } from "@/components/common/Logo";
 import { Confetti } from "@/components/common/Confetti";
-import WarpText from "@/components/common/WarpText";
 import GradientWaves from "@/components/common/GradientWaves";
 import {
   Star,
@@ -200,25 +199,14 @@ export default function LandingPage() {
           <span className="tracking-wide uppercase">Meenakshi Sundararajan Engineering College</span>
         </div>
 
-        {/* Festival Title with WebGL WarpText from React Bits */}
+        {/* Festival Title — Instant High-Performance Gradient Text */}
         <div className="relative z-10 w-full max-w-4xl px-2 flex flex-col items-center">
-          <div className="w-full max-w-2xl h-[110px] xs:h-[130px] sm:h-[160px] md:h-[180px] flex items-center justify-center">
-            <WarpText
-              text={festName}
-              color="#ffffff"
-              warpStrength={0.07}
-              warpScale={1.6}
-              speed={0.45}
-              pointerInfluence={0.38}
-              pointerStrength={0.35}
-              refraction={0.015}
-              ripple
-              fontSize="clamp(2.8rem, 8vw, 6.5rem)"
-              fontWeight={800}
-              fontFamily="var(--font-bricolage), sans-serif"
-              style={{ width: "100%", height: "100%" }}
-            />
-          </div>
+          <h1
+            className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-pink-200 drop-shadow-md py-2 leading-[1.08] text-center"
+            style={{ fontFamily: "var(--font-bricolage), sans-serif" }}
+          >
+            {festName}
+          </h1>
 
           <p className="mt-1 sm:mt-2 text-base sm:text-lg md:text-xl font-medium text-white/95 leading-relaxed max-w-2xl mx-auto drop-shadow-xs">
             The Official People&apos;s Choice Performance Rating App.

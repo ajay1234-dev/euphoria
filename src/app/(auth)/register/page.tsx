@@ -377,8 +377,53 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* STEP 1: Google OAuth Entry Point */}
-          {step === "auth" && (
+          {/* Registration Closed Notice (Instant Real-Time Reaction) */}
+          {config?.registrationOpen === false && step !== "success" ? (
+            <div className="space-y-6 text-center py-4">
+              <div
+                className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl shadow-sm"
+                style={{ background: "rgba(217, 119, 6, 0.12)", color: "#D97706" }}
+              >
+                <Lock className="h-8 w-8" />
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-xl font-black text-slate-900" style={{ fontFamily: "var(--font-bricolage)" }}>
+                  Registration is Currently Closed
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">
+                  Student registration for {festName} has been paused or locked by festival administrators. Please check back later or contact your college event organizer.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border p-4 text-left bg-amber-50/60 border-amber-200/80">
+                <p className="text-xs text-amber-900 font-medium">
+                  <strong>Already registered earlier?</strong> You can still log in to your account and participate in live event voting.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <Link
+                  href="/login"
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 px-4 text-sm font-bold text-white shadow-sm transition hover:opacity-95"
+                  style={{ background: "var(--gradient-hero)", minHeight: "48px" }}
+                >
+                  <span>Student Log In</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/"
+                  className="w-full flex items-center justify-center rounded-2xl border border-slate-200 py-3 px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                  style={{ minHeight: "48px" }}
+                >
+                  Return to Home
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* STEP 1: Google OAuth Entry Point */}
+              {step === "auth" && (
             <div className="space-y-6 text-center">
               <div className="rounded-2xl border p-4 text-left bg-slate-50/70 border-slate-200/80">
                 <div className="flex items-start gap-2.5">
@@ -671,6 +716,8 @@ export default function RegisterPage() {
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
+          )}
+            </>
           )}
         </div>
 

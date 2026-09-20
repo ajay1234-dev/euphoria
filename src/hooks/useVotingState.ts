@@ -7,18 +7,21 @@ import type { VotingState } from "@/types/firestore";
 
 interface UseVotingStateResult {
   votingState: VotingState | null;
+  serverOffsetMs: number;
   loading: boolean;
   error: string | null;
 }
 
 /**
- * The one real-time listener in Phase 1.
+ * The real-time listener for stage voting state.
  * Subscribes to events/{eventId}/state/current via onSnapshot.
+ * Calculates serverOffsetMs from server timestamps to prevent client clock tampering.
  */
 export function useVotingState(
   eventId: string | null | undefined
 ): UseVotingStateResult {
   const [votingState, setVotingState] = useState<VotingState | null>(null);
+  const [serverOffsetMs, setServerOffsetMs] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const unsubRef = useRef<(() => void) | null>(null);
@@ -27,6 +30,7 @@ export function useVotingState(
     if (!eventId) {
       setLoading(false);
       setVotingState(null);
+      setServerOffsetMs(0);
       return;
     }
 
@@ -38,7 +42,11 @@ export function useVotingState(
       ref,
       (snap) => {
         if (snap.exists()) {
-          setVotingState(snap.data());
+          const data = snap.data();
+          setVotingState(data);
+          if (data?.updatedAt) {
+            setServerOffsetMs(data.updatedAt.toMillis() - Date.now());
+          }
         } else {
           setVotingState(null);
         }
@@ -55,5 +63,5 @@ export function useVotingState(
     };
   }, [eventId]);
 
-  return { votingState, loading, error };
+  return { votingState, serverOffsetMs, loading, error };
 }

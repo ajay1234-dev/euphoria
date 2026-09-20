@@ -27,8 +27,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
-// ── Countdown Hook ─────────────────────────────────────────────────────────────
-function useCountdown(endsAtMs: number | null): number {
+// ── Countdown Hook (uses server offset to prevent client clock tampering) ──────
+function useCountdown(endsAtMs: number | null, serverOffsetMs: number = 0): number {
   const [remaining, setRemaining] = useState(0);
 
   useEffect(() => {
@@ -37,13 +37,14 @@ function useCountdown(endsAtMs: number | null): number {
       return;
     }
     const tick = () => {
-      const diff = Math.max(0, Math.round((endsAtMs - Date.now()) / 1000));
+      const serverNow = Date.now() + serverOffsetMs;
+      const diff = Math.max(0, Math.round((endsAtMs - serverNow) / 1000));
       setRemaining(diff);
     };
     tick();
     const id = setInterval(tick, 500);
     return () => clearInterval(id);
-  }, [endsAtMs]);
+  }, [endsAtMs, serverOffsetMs]);
 
   return remaining;
 }
@@ -62,7 +63,7 @@ function VoteDashboard() {
   const { departments } = useDepartments();
   const { categories } = useCategories();
   const { performances, loading: perfsLoading } = usePerformances(config?.activeEventId);
-  const { votingState, loading: vsLoading } = useVotingState(config?.activeEventId);
+  const { votingState, serverOffsetMs, loading: vsLoading } = useVotingState(config?.activeEventId);
 
   // Live voting state
   const [selectedRating, setSelectedRating] = useState<number>(5);
@@ -84,7 +85,16 @@ function VoteDashboard() {
   const activePerfCat = activePerf?.categoryId ? catMap[activePerf.categoryId] : null;
 
   const endsAtMs = votingState?.votingEndsAt ? votingState.votingEndsAt.toMillis() : null;
-  const remaining = useCountdown(isOpen ? endsAtMs : null);
+  const remaining = useCountdown(isOpen ? endsAtMs : null, serverOffsetMs);
+
+  // Reset vote state when active performance changes (new act starts)
+  useEffect(() => {
+    setSelectedRating(5);
+    setHoveredRating(null);
+    setExistingVote(null);
+    setJustVoted(false);
+    setVoteError(null);
+  }, [activePerfId]);
 
   // Subscribe to student's vote for the active performance (Idempotent 1-vote check)
   useEffect(() => {
@@ -121,9 +131,14 @@ function VoteDashboard() {
     return () => unsubscribe();
   }, [config?.activeEventId, activePerfId, profile?.uid]);
 
-  // Handle vote submission — writes to unique subcollection doc per UID (0 contention)
+  // Handle vote submission — minimal vote doc per Phase 2 spec (no personal data)
   const handleVote = async () => {
     if (!config?.activeEventId || !activePerfId || !profile?.uid) return;
+    // Guard: timer has expired — don't submit
+    if (remaining === 0 && isOpen) {
+      setVoteError("Voting time has expired. Wait for the admin to finalize.");
+      return;
+    }
     setSubmitting(true);
     setVoteError(null);
 
@@ -138,15 +153,11 @@ function VoteDashboard() {
         profile.uid
       );
 
+      // Phase 2: Minimal vote doc — only studentUid, rating, createdAt
       await setDoc(voteDocRef, {
-        uid: profile.uid,
         studentUid: profile.uid,
         rating: selectedRating,
-        departmentId: profile.departmentId ?? null,
-        year: profile.year ?? null,
-        section: profile.section ?? null,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       });
 
       setJustVoted(true);
@@ -156,6 +167,7 @@ function VoteDashboard() {
       setSubmitting(false);
     }
   };
+
 
   // Mask email: show first 3 chars + *** + @domain
   const maskedEmail = profile?.email
@@ -280,6 +292,14 @@ function VoteDashboard() {
               </div>
             )}
 
+            {/* Timer expired banner — show when time hits 0 but state still "open" */}
+            {remaining === 0 && isOpen && existingVote === null && !justVoted && (
+              <div className="flex items-center gap-2 rounded-xl p-3 text-xs sm:text-sm font-medium bg-amber-50 border border-amber-200 text-amber-800">
+                <Clock className="h-4 w-4 shrink-0" />
+                <span>Time is up! The admin is finalizing results. Your vote window has closed.</span>
+              </div>
+            )}
+
             {/* Vote Submitted Confirmed State */}
             {existingVote !== null || justVoted ? (
               <div className="rounded-2xl p-6 text-center space-y-3 bg-emerald-50 border border-emerald-200 shadow-sm">
@@ -360,10 +380,10 @@ function VoteDashboard() {
                 <button
                   type="button"
                   onClick={handleVote}
-                  disabled={submitting}
+                  disabled={submitting || remaining === 0}
                   className="tap-scale w-full rounded-2xl px-6 py-4 text-base sm:text-lg font-extrabold text-white shadow-lg transition-all hover:opacity-95 disabled:opacity-50"
                   style={{
-                    background: "var(--gradient-hero)",
+                    background: remaining === 0 ? "#94A3B8" : "var(--gradient-hero)",
                     minHeight: "52px",
                   }}
                 >
@@ -371,6 +391,11 @@ function VoteDashboard() {
                     <span className="flex items-center justify-center gap-2">
                       <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
                       Securing Your Vote…
+                    </span>
+                  ) : remaining === 0 ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Voting Window Closed
                     </span>
                   ) : (
                     <span className="flex items-center justify-center gap-2">
@@ -380,6 +405,7 @@ function VoteDashboard() {
                   )}
                 </button>
               </div>
+
             )}
           </div>
         ) : (

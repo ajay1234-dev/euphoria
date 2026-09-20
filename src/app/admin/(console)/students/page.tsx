@@ -200,6 +200,7 @@ export default function StudentsPage() {
           <Button
             onClick={handleExport}
             disabled={exporting}
+            size="sm"
             className="flex items-center gap-2 shadow-sm"
           >
             <Download className="h-4 w-4" />

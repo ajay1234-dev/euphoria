@@ -15,32 +15,32 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: [
-          "text-white shadow-md",
-          "bg-[var(--gradient-hero)] bg-[length:200%_200%]",
-          "hover:opacity-90 hover:shadow-lg",
+          "text-white shadow-md bg-indigo-600 hover:bg-indigo-700",
+          "bg-gradient-to-r from-[#3B4CCA] via-[#5244DE] to-[#7C3AED]",
+          "hover:opacity-95 hover:shadow-lg",
         ].join(" "),
         secondary: [
-          "bg-[var(--violet)] text-white shadow-sm",
-          "hover:opacity-90",
+          "bg-purple-600 hover:bg-purple-700 text-white shadow-sm",
+          "hover:opacity-95",
         ].join(" "),
         outline: [
-          "border border-[var(--border)] bg-transparent text-[var(--ink)]",
-          "hover:bg-[var(--surface-alt)]",
+          "border border-slate-200 bg-white text-slate-800 shadow-2xs",
+          "hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300",
         ].join(" "),
         ghost: [
-          "bg-transparent text-[var(--ink)]",
-          "hover:bg-[var(--surface-alt)]",
+          "bg-transparent text-slate-700",
+          "hover:bg-slate-100 hover:text-slate-900",
         ].join(" "),
         destructive: [
-          "bg-[var(--error)] text-white shadow-sm",
-          "hover:opacity-90",
+          "bg-red-600 text-white shadow-sm",
+          "hover:bg-red-700 hover:opacity-95",
         ].join(" "),
       },
       size: {
         sm: "h-9 px-4 text-xs rounded-[10px]",
-        default: "h-12 px-6 text-sm",
-        lg: "h-14 px-8 text-base",
-        icon: "h-12 w-12",
+        default: "h-11 px-5 text-sm",
+        lg: "h-13 px-7 text-base",
+        icon: "h-10 w-10",
       },
     },
     defaultVariants: {

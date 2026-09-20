@@ -26,6 +26,8 @@ import {
   AlertCircle,
   Sparkles,
 } from "lucide-react";
+import PeekRating from "@/components/ui/PeekRating";
+
 
 // ── Countdown Hook (uses server offset to prevent client clock tampering) ──────
 function useCountdown(endsAtMs: number | null, serverOffsetMs: number = 0): number {
@@ -332,41 +334,38 @@ function VoteDashboard() {
               /* Interactive Star Selector & Submit CTA */
               <div className="space-y-5 rounded-2xl bg-white p-5 sm:p-6 border border-purple-100 shadow-sm text-center">
                 <p className="text-sm sm:text-base font-bold text-slate-800">
-                  Tap to rate this performance:
+                  Select your rating for this performance:
                 </p>
 
-                {/* 5 Big Accessible Stars */}
-                <div
-                  className="flex items-center justify-center gap-2 sm:gap-4 py-2"
-                  role="radiogroup"
-                  aria-label="Rate performance from 1 to 5 stars"
-                >
-                  {[1, 2, 3, 4, 5].map((star) => {
-                    const isFilled = star <= effectiveRating;
-                    return (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setSelectedRating(star)}
-                        onMouseEnter={() => setHoveredRating(star)}
-                        onMouseLeave={() => setHoveredRating(null)}
-                        className="tap-scale flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        style={{
-                          background: isFilled ? "#FEF3C7" : "#F8FAFC",
-                          border: isFilled ? "2px solid #F59E0B" : "1px solid #E2E8F0",
-                        }}
-                        aria-label={`${star} Stars`}
-                      >
-                        <Star
-                          className={`h-8 w-8 sm:h-9 sm:w-9 transition-colors ${
-                            isFilled
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-slate-300"
-                          }`}
-                        />
-                      </button>
-                    );
-                  })}
+                {/* React Bits PeekRating Component */}
+                <div className="flex flex-col items-center justify-center py-2">
+                  <PeekRating
+                    value={selectedRating}
+                    onChange={(val) => {
+                      if (val > 0) setSelectedRating(val);
+                    }}
+                    onPreview={(val) => setHoveredRating(val)}
+                    count={5}
+                    shape="star"
+                    labels={[
+                      "Needs Improvement",
+                      "Fair Effort",
+                      "Good Performance",
+                      "Great Act!",
+                      "Superb Champion!"
+                    ]}
+                    activeColor="#F59E0B"
+                    idleColor="#CBD5E1"
+                    tipColor="#1E1B4B"
+                    tipTextColor="#F8FAFC"
+                    size={36}
+                    lift={8}
+                    magnify={1.2}
+                    riseDuration={320}
+                    popScale={1.3}
+                    showTip
+                    allowClear={false}
+                  />
                 </div>
 
                 {/* Star Description Badge */}

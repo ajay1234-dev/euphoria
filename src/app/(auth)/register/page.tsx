@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { doc, getDoc, writeBatch, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppConfig } from "@/hooks/useData";
 import {
   validateCollegeIdentity,
   validateStudentRegistrationData,
+  extractStudentNameFromIdentity,
   YEAR_OPTIONS,
   DEFAULT_SECTIONS,
   formatYearLabel,
@@ -70,7 +71,7 @@ function GoogleIcon({ className = "h-5 w-5" }: { className?: string }) {
 }
 
 export default function RegisterPage() {
-  const { status, studentProfile } = useAuth();
+  const { status, studentProfile, refreshAuth } = useAuth();
   const router = useRouter();
   const { config, loading: configLoading } = useAppConfig();
 
@@ -99,22 +100,24 @@ export default function RegisterPage() {
     section: string;
   } | null>(null);
 
-  // If already authenticated and registered, redirect to student dashboard
+  // If already authenticated and registered, redirect to student dashboard (except when on the success screen)
   useEffect(() => {
     if (status === "loading") return;
+    if (step === "success") return; // Keep user on success screen until they click "Continue to Dashboard"
     if (status === "ready" || !!studentProfile) {
       router.replace("/student/dashboard");
     } else if (status === "admin") {
       router.replace("/admin");
     }
-  }, [status, studentProfile, router]);
+  }, [status, studentProfile, step, router]);
 
   if (status === "loading" || configLoading) return <PageSkeleton />;
 
   const festName = config?.festName ?? "Euphoria 2026";
+  // Registration form sections: Section A and Section B alone
   const availableSections =
     config?.sections && config.sections.length > 0
-      ? config.sections
+      ? config.sections.filter((s) => ["A", "B"].includes(s.toUpperCase()))
       : Array.from(DEFAULT_SECTIONS);
 
   // STEP 1: Google Authentication & Identity Validation
@@ -128,12 +131,31 @@ export default function RegisterPage() {
       const email = (user.email ?? "").toLowerCase().trim();
 
       // 1. Check if user is already registered in students/{uid} or users/{uid}
-      const [studentDocSnap, userDocSnap] = await Promise.all([
-        getDoc(doc(db, "students", user.uid)),
-        getDoc(doc(db, "users", user.uid)),
-      ]);
+      let alreadyRegistered = false;
+      try {
+        const [studentDocSnap, userDocSnap] = await Promise.all([
+          getDoc(doc(db, "students", user.uid)),
+          getDoc(doc(db, "users", user.uid)),
+        ]);
+        if (studentDocSnap.exists() || userDocSnap.exists()) {
+          alreadyRegistered = true;
+        }
+      } catch {
+        try {
+          const idToken = await user.getIdToken();
+          const pRes = await fetch("/api/auth/profile", {
+            headers: { Authorization: `Bearer ${idToken}` },
+          });
+          if (pRes.ok) {
+            const pData = await pRes.json();
+            if (pData.exists) alreadyRegistered = true;
+          }
+        } catch {
+          // ignore check error and proceed
+        }
+      }
 
-      if (studentDocSnap.exists() || userDocSnap.exists()) {
+      if (alreadyRegistered) {
         // Existing registered student! Route straight to dashboard
         router.replace("/student/dashboard");
         return;
@@ -157,13 +179,13 @@ export default function RegisterPage() {
           title: "College Account Validation Failed",
           description:
             validation.error ||
-            "Only official MSEC college Google accounts (12 digits@msec.edu.in) are permitted.",
+            "Only official MSEC college Google accounts are permitted.",
         });
         return;
       }
 
-      // 4. Pre-fill student name from Google displayName whenever available
-      const prefilledName = user.displayName?.trim() || "";
+      // 4. Pre-fill student name from email/Google profile (stripping any raw register numbers)
+      const prefilledName = extractStudentNameFromIdentity(email, user.displayName);
       setStudentName(prefilledName);
       setSelectedYear("");
       setSelectedSection("");
@@ -233,65 +255,35 @@ export default function RegisterPage() {
     setErrorMessage(null);
     setCompleting(true);
 
-    const { user, email, registerNumber, departmentCode, department } = identity;
+    const { user, registerNumber, departmentCode, department } = identity;
     const trimmedName = studentName.trim();
     const yearNum = Number(selectedYear);
-    const domain = email.split("@")[1]?.toLowerCase() || "msec.edu.in";
 
     try {
-      const batch = writeBatch(db);
-
-      // 1. Primary Student Document: students/{uid}
-      const studentDocRef = doc(db, "students", user.uid);
-      const studentData = {
-        uid: user.uid,
-        name: trimmedName,
-        email,
-        registerNumber,
-        year: yearNum,
-        departmentCode,
-        department: department.name,
-        section: selectedSection,
-        role: "student",
-        registrationStatus: "registered",
-        registeredAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      batch.set(studentDocRef, studentData);
-
-      // 2. Compatibility Document: users/{uid}
-      const userDocRef = doc(db, "users", user.uid);
-      const userProfileData = {
-        uid: user.uid,
-        fullName: trimmedName,
-        name: trimmedName,
-        email,
-        emailDomain: domain,
-        studentId: registerNumber,
-        registerNumber,
-        year: yearNum,
-        section: selectedSection,
-        departmentCode,
-        department: department.shortCode,
-        departmentId: `dept-${department.shortCode.toLowerCase()}`,
-        role: "student",
-        registrationStatus: "registered",
-        emailVerified: true,
-        verifiedAt: null,
-        createdAt: serverTimestamp(),
-        registeredAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      batch.set(userDocRef, userProfileData);
-
-      // 3. Unique Student Claim: studentIdClaims/{registerNumber}
-      const claimRef = doc(db, "studentIdClaims", registerNumber);
-      batch.set(claimRef, {
-        uid: user.uid,
-        createdAt: serverTimestamp(),
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          name: trimmedName,
+          registerNumber,
+          year: yearNum,
+          departmentCode,
+          department: department.name,
+          section: selectedSection,
+        }),
       });
 
-      await batch.commit();
+      const result = await res.json();
+      if (!res.ok || !result.ok) {
+        throw new Error(result.error || "Server failed to complete registration.");
+      }
+
+      // Refresh auth context so status becomes 'ready' and studentProfile is loaded
+      await refreshAuth();
 
       // Store summary for success screen
       setRegisteredSummary({
@@ -307,8 +299,8 @@ export default function RegisterPage() {
     } catch (err: unknown) {
       console.error("[Euphoria Registration Error]:", err);
       const errMsg =
-        err instanceof Error && err.message.includes("permission-denied")
-          ? "This college register number may already be registered with another account, or registration has closed."
+        err instanceof Error
+          ? err.message
           : "Unable to complete your festival registration. Please check your connection and try again.";
 
       setErrorMessage({
@@ -396,7 +388,7 @@ export default function RegisterPage() {
                       Official College Google Account Only
                     </p>
                     <p className="mt-0.5">
-                      Your 12-digit register number and engineering department will be auto-detected securely from your account.
+                      Your department will be auto-detected securely from your account.
                     </p>
                   </div>
                 </div>
@@ -666,14 +658,18 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <Link
-                href="/student/dashboard"
-                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 px-4 text-sm font-bold text-white shadow-md transition hover:opacity-95 active:scale-[0.99]"
+              <button
+                type="button"
+                onClick={async () => {
+                  await refreshAuth();
+                  router.replace("/student/dashboard");
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 px-4 text-sm font-bold text-white shadow-md transition hover:opacity-95 active:scale-[0.99] cursor-pointer"
                 style={{ background: "var(--gradient-hero)", minHeight: "50px" }}
               >
-                <span>Go to Dashboard</span>
+                <span>Continue to Dashboard</span>
                 <ArrowRight className="h-4 w-4" />
-              </Link>
+              </button>
             </div>
           )}
         </div>

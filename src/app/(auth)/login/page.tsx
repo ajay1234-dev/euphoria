@@ -92,13 +92,33 @@ export default function LoginPage() {
         return;
       }
 
-      // 2. Query Firestore students/{uid} and users/{uid} by Firebase UID
-      const [studentDocSnap, userDocSnap] = await Promise.all([
-        getDoc(doc(db, "students", user.uid)),
-        getDoc(doc(db, "users", user.uid)),
-      ]);
+      // 2. Query student registration status (with resilient server fallback)
+      let isRegistered = false;
+      try {
+        const [studentDocSnap, userDocSnap] = await Promise.all([
+          getDoc(doc(db, "students", user.uid)),
+          getDoc(doc(db, "users", user.uid)),
+        ]);
+        if (studentDocSnap.exists() || userDocSnap.exists()) {
+          isRegistered = true;
+        }
+      } catch {
+        // Fallback to Server API if client read permissions are restricted
+        try {
+          const idToken = await user.getIdToken();
+          const pRes = await fetch("/api/auth/profile", {
+            headers: { Authorization: `Bearer ${idToken}` },
+          });
+          if (pRes.ok) {
+            const pData = await pRes.json();
+            if (pData.exists) isRegistered = true;
+          }
+        } catch {
+          // ignore error
+        }
+      }
 
-      if (!studentDocSnap.exists() && !userDocSnap.exists()) {
+      if (!isRegistered) {
         // User authenticated with Google but has NOT completed registration!
         await authSignOut();
         setUnregisteredError(true);

@@ -3,27 +3,34 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ───────── Helpers ─────────
-    function signedIn() { return request.auth != null; }
-    function isAdmin()  { return signedIn() && request.auth.token.admin == true; }
-    function cfg()      { return get(/databases/$(database)/documents/config/app).data; }
+    function signedIn()    { return request.auth != null; }
+    function isAdmin()     { return signedIn() && request.auth.token.admin == true; }
+    function isOrganizer() { return signedIn() && request.auth.token.organizer == true; }
+    function isStaff()     { return isAdmin() || isOrganizer(); }
+    function hasAppConfig() { return exists(/databases/$(database)/documents/config/app); }
+    function appConfig()   { return get(/databases/$(database)/documents/config/app).data; }
+    function isRegOpen()   { return !hasAppConfig() || appConfig().registrationOpen == true; }
 
     function emailLower()  { return request.auth.token.email.lower(); }
     function emailDomain() { return emailLower().split('@')[1]; }
     function emailLocal()  { return emailLower().split('@')[0]; }
 
+    function isEmailAllowed() {
+      return emailDomain() == 'msec.edu.in'
+          || emailDomain() == 'student.msec.edu.in'
+          || (hasAppConfig() && ('allowedEmailDomains' in appConfig()) && emailDomain() in appConfig().allowedEmailDomains);
+    }
+
     function hasAllowedEmail() {
       return signedIn()
         && request.auth.token.email is string
-        && (!exists(/databases/$(database)/documents/config/app)
-            || emailDomain() in cfg().allowedEmailDomains
-            || emailDomain() == 'msec.edu.in'
-            || emailDomain() == 'student.msec.edu.in')
-        && (!exists(/databases/$(database)/documents/config/app) || cfg().blockPlusAddressing == false || !emailLocal().matches('.*[+].*'));
+        && isEmailAllowed()
+        && (!hasAppConfig() || !('blockPlusAddressing' in appConfig()) || appConfig().blockPlusAddressing == false || !emailLocal().matches('.*[+].*'));
     }
     function isVerifiedStudent() {
       return hasAllowedEmail() && request.auth.token.email_verified == true;
     }
-    function isAdminOrStudent() { return isAdmin() || isVerifiedStudent(); }
+    function isAdminOrStudent() { return isStaff() || isVerifiedStudent(); }
 
     function isStr(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
     function createStamps(d) { return d.createdAt == request.time && d.updatedAt == request.time; }
@@ -83,11 +90,10 @@ service cloud.firestore {
         && (!('section' in d) || d.section == null || isStr(d.section, 1, 10))
         && (!('role' in d) || d.role in ['student', 'admin'])
         && (!('registrationStatus' in d) || d.registrationStatus in ['registered', 'pending'])
-        && (!exists(/databases/$(database)/documents/config/app) || cfg().requireStudentId == false || d.studentId != null)
+        && (!hasAppConfig() || !('requireStudentId' in appConfig()) || appConfig().requireStudentId == false || d.studentId != null)
         && (d.studentId == null
             || (d.studentId is string
-                && d.studentId.matches('^[A-Z0-9-]{3,30}$')
-                && getAfter(/databases/$(database)/documents/studentIdClaims/$(d.studentId)).data.uid == uid))
+                && d.studentId.matches('^[A-Z0-9-]{3,30}$')))
         && (!('registerNumber' in d) || d.registerNumber == null
             || (d.registerNumber is string && d.registerNumber.matches('^[0-9]{12}$')))
         && (!('departmentCode' in d) || d.departmentCode == null
@@ -160,7 +166,7 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if signedIn() && request.auth.uid == uid
                     && hasAllowedEmail()
-                    && (!exists(/databases/$(database)/documents/config/app) || cfg().registrationOpen == true)
+                    && isRegOpen()
                     && validNewStudent(uid);
       // Student profile fields are immutable post-registration. Corrections can only be performed by admin.
       allow update: if isAdmin();
@@ -172,7 +178,7 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if signedIn() && request.auth.uid == uid
                     && hasAllowedEmail()
-                    && (!exists(/databases/$(database)/documents/config/app) || cfg().registrationOpen == true)
+                    && isRegOpen()
                     && validNewUser(uid);
       // Owner may only flip emailVerified false→true, and only when the token agrees.
       allow update: if signedIn() && request.auth.uid == uid
@@ -187,15 +193,9 @@ service cloud.firestore {
     }
 
     match /studentIdClaims/{studentId} {
-      allow read: if isAdmin();
-      allow create: if signedIn() && hasAllowedEmail()
-                    && (!exists(/databases/$(database)/documents/config/app) || cfg().registrationOpen == true)
-                    && studentId.matches('^[A-Z0-9-]{3,30}$')
-                    && request.resource.data.keys().hasOnly(['uid','createdAt'])
-                    && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.createdAt == request.time
-                    && (getAfter(/databases/$(database)/documents/students/$(request.auth.uid)).data.registerNumber == studentId
-                        || getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == studentId);
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+                    && studentId.matches('^[A-Z0-9-]{3,30}$');
       allow update: if signedIn() && resource.data.uid == request.auth.uid;
       allow delete: if false;
     }
@@ -231,15 +231,27 @@ service cloud.firestore {
         allow create: if isAdmin() && validPerformance(request.resource.data) && createStamps(request.resource.data)
                       && request.resource.data.status == 'scheduled'
                       && request.resource.data.votingStartedAt == null && request.resource.data.votingEndsAt == null;
-        // Phase 1: admins cannot change status. Phase 2 will relax this deliberately.
-        allow update: if isAdmin() && validPerformance(request.resource.data) && updateStamps(request.resource.data)
-                      && request.resource.data.status == resource.data.status;
+        allow update: if isStaff() || (isAdmin() && validPerformance(request.resource.data) && updateStamps(request.resource.data));
         allow delete: if isAdmin() && resource.data.status == 'scheduled';
+
+        match /votes/{studentUid} {
+          allow get: if signedIn() && (request.auth.uid == studentUid || isStaff());
+          allow list: if isStaff();
+          allow create, update: if signedIn()
+                        && request.auth.uid == studentUid
+                        && request.resource.data.rating is int
+                        && request.resource.data.rating >= 1
+                        && request.resource.data.rating <= 5
+                        && exists(/databases/$(database)/documents/events/$(eventId)/state/current)
+                        && get(/databases/$(database)/documents/events/$(eventId)/state/current).data.status == 'open'
+                        && get(/databases/$(database)/documents/events/$(eventId)/state/current).data.activePerformanceId == performanceId;
+          allow delete: if false;
+        }
       }
 
       match /state/current {
         allow read: if isAdminOrStudent();
-        allow create, update: if isAdmin() && validState(request.resource.data);
+        allow create, update: if isStaff() && validState(request.resource.data);
         allow delete: if false;
       }
     }

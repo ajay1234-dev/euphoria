@@ -634,7 +634,7 @@ export default function PerformancesPage() {
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         title="Remove Performance?"
-        description={`Are you sure you want to remove "${deleteTarget?.name}" from tonight's lineup? Only scheduled performances can be removed.`}
+        description={`Are you sure you want to remove "${deleteTarget?.name}" from the festival lineup? Only scheduled performances can be removed.`}
         confirmLabel="Remove Performance"
         destructive
         onConfirm={handleDelete}

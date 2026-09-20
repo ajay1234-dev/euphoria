@@ -23,7 +23,7 @@ import {
   configAppRef,
 } from "@/lib/firebase/paths";
 import { signInWithGooglePopup } from "@/lib/firebase/auth-google";
-import { isAdminToken } from "@/lib/auth/claims";
+import { isAdminToken, isOrganizerToken } from "@/lib/auth/claims";
 import { checkEmailEligibility } from "@/lib/auth/eligibility";
 import type { AuthStatus } from "@/lib/auth/resolveRoute";
 import type { UserProfile, StudentProfile, AppConfig } from "@/types/firestore";
@@ -36,6 +36,7 @@ export interface AuthContextValue {
   studentProfile: StudentProfile | null;
   config: AppConfig | null;
   isAdmin: boolean;
+  isOrganizer: boolean;
   isRegistered: boolean;
   signInWithGoogle: () => Promise<unknown>;
   signOut: () => Promise<void>;
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOrganizer, setIsOrganizer] = useState(false);
 
   // Cache config — it changes rarely
   const configCacheRef = useRef<AppConfig | null>(null);
@@ -77,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setStudentProfile(null);
         setIsAdmin(false);
+        setIsOrganizer(false);
         setStatus("signed-out");
         return;
       }
@@ -93,10 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const adminFlag = isAdminToken(tokenResult);
+      const organizerFlag = isOrganizerToken(tokenResult);
       setIsAdmin(adminFlag);
+      setIsOrganizer(organizerFlag);
 
       if (adminFlag) {
         setStatus("admin");
+        return;
+      }
+
+      if (organizerFlag) {
+        setStatus("organizer");
         return;
       }
 
@@ -170,7 +180,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setStatus("needs-profile");
       } catch (err) {
-        console.error("Error resolving student profile:", err);
+        // Fallback to Server API if Client Firestore has permission restrictions
+        try {
+          const idToken = await firebaseUser.getIdToken();
+          const profileRes = await fetch("/api/auth/profile", {
+            headers: { Authorization: `Bearer ${idToken}` },
+          });
+          if (profileRes.ok) {
+            const result = await profileRes.json();
+            if (result.exists && result.profile) {
+              const sData = result.profile;
+              setStudentProfile(sData);
+              setProfile({
+                uid: sData.uid,
+                fullName: sData.name,
+                name: sData.name,
+                email: sData.email,
+                emailDomain: sData.email.split("@")[1]?.toLowerCase() || "msec.edu.in",
+                studentId: sData.registerNumber,
+                registerNumber: sData.registerNumber,
+                year: sData.year,
+                section: sData.section,
+                departmentCode: sData.departmentCode,
+                department: sData.department,
+                departmentId: `dept-${sData.departmentCode}`,
+                role: sData.role,
+                registrationStatus: sData.registrationStatus,
+                emailVerified: true,
+                verifiedAt: sData.registeredAt,
+                createdAt: sData.registeredAt,
+                registeredAt: sData.registeredAt,
+                updatedAt: sData.updatedAt,
+              });
+              setStatus("ready");
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.error("Server profile fallback also failed:", apiErr);
+        }
+
         setStudentProfile(null);
         setProfile(null);
         setStatus("needs-profile");
@@ -185,12 +234,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [resolveStatus]);
 
   const signOutUser = useCallback(async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch {
+      // ignore
+    }
     setUser(null);
     setProfile(null);
     setStudentProfile(null);
     setIsAdmin(false);
+    setIsOrganizer(false);
     setStatus("signed-out");
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
+    }
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
@@ -217,6 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         studentProfile,
         config,
         isAdmin,
+        isOrganizer,
         isRegistered,
         signInWithGoogle,
         signOut: signOutUser,

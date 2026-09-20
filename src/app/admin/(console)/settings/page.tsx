@@ -75,7 +75,7 @@ export default function SettingsPage() {
   const [requireStudentId, setRequireStudentId] = useState(false);
   const [studentIdPattern, setStudentIdPattern] = useState("");
   const [registrationOpen, setRegistrationOpen] = useState(true);
-  const [sections, setSections] = useState<string[]>(["A", "B", "C"]);
+  const [sections, setSections] = useState<string[]>(["A", "B"]);
   const [newSectionInput, setNewSectionInput] = useState("");
   const [savingReg, setSavingReg] = useState(false);
 
@@ -118,7 +118,7 @@ export default function SettingsPage() {
       setRequireStudentId(config.requireStudentId);
       setStudentIdPattern(config.studentIdPattern || "");
       setRegistrationOpen(config.registrationOpen ?? true);
-      setSections(config.sections && config.sections.length > 0 ? config.sections : ["A", "B", "C"]);
+      setSections(config.sections && config.sections.length > 0 ? config.sections : ["A", "B"]);
     }
   }, [config]);
 

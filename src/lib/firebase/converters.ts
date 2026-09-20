@@ -14,6 +14,7 @@ import type {
   Performance,
   VotingState,
   AdminDirectoryEntry,
+  Vote,
 } from "@/types/firestore";
 
 function makeConverter<T extends object>(): FirestoreDataConverter<T> {
@@ -40,3 +41,4 @@ export const festEventConverter = makeConverter<FestEvent>();
 export const performanceConverter = makeConverter<Performance>();
 export const votingStateConverter = makeConverter<VotingState>();
 export const adminDirectoryEntryConverter = makeConverter<AdminDirectoryEntry>();
+export const voteConverter = makeConverter<Vote>();

@@ -9,6 +9,7 @@ export const appConfigSchema = z.object({
   requireStudentId: z.boolean(),
   studentIdPattern: z.string().min(1).max(200).nullable(),
   registrationOpen: z.boolean(),
+  sections: z.array(z.string().min(1)).min(1).max(20).optional(),
 });
 
 export type AppConfigInput = z.infer<typeof appConfigSchema>;

@@ -114,3 +114,14 @@ export interface AdminDirectoryEntry {
   addedAt: Timestamp;
   addedBy: string;
 }
+
+export interface Vote {
+  uid: string;
+  studentUid: string;
+  rating: number; // 1 to 5
+  departmentId?: string | null;
+  year?: number | null;
+  section?: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}

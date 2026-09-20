@@ -168,7 +168,7 @@ export default function AdminOverviewPage() {
       title: "Performances scheduled",
       desc: hasPerformances
         ? `${stats.performanceCount} performances added`
-        : "Add acts and lineup for tonight",
+        : "Add acts and lineup for the festival",
       passed: hasPerformances,
       href: "/admin/performances",
     },

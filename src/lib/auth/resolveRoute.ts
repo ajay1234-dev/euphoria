@@ -2,6 +2,7 @@ export type AuthStatus =
   | "loading"
   | "signed-out"
   | "admin"
+  | "organizer"
   | "not-eligible"
   | "needs-profile"
   | "unverified"
@@ -17,9 +18,11 @@ export function resolveRoute(status: AuthStatus): string | null {
     case "loading":
       return null; // stay, show skeleton
     case "signed-out":
-      return "/login";
+      return "/"; // Always redirect signed-out users back to the landing page
     case "admin":
       return "/admin"; // admin users go to the admin console
+    case "organizer":
+      return "/organizer/dashboard"; // organizer → their dashboard
     case "not-eligible":
       return "/not-eligible";
     case "needs-profile":
@@ -50,7 +53,10 @@ export function isRouteAllowed(status: AuthStatus, pathname: string): boolean {
     case "signed-out":
       return publicRoutes.some((r) => pathname.startsWith(r));
     case "admin":
-      return pathname.startsWith("/admin");
+      // admins can access admin console AND the organizer dashboard
+      return pathname.startsWith("/admin") || pathname.startsWith("/organizer/dashboard");
+    case "organizer":
+      return pathname.startsWith("/organizer/dashboard");
     case "not-eligible":
       return pathname === "/not-eligible";
     case "needs-profile":

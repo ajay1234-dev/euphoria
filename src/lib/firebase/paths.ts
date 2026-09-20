@@ -16,6 +16,7 @@ import type {
   Performance,
   VotingState,
   AdminDirectoryEntry,
+  Vote,
 } from "@/types/firestore";
 import {
   appConfigConverter,
@@ -28,6 +29,7 @@ import {
   performanceConverter,
   votingStateConverter,
   adminDirectoryEntryConverter,
+  voteConverter,
 } from "./converters";
 
 // ── Singleton document paths ──────────────────────────────────────────────────
@@ -146,3 +148,36 @@ export function votingStateRef(eventId: string): DocumentReference<VotingState> 
     votingStateConverter
   );
 }
+
+// ── Votes subcollection (events/{eventId}/performances/{performanceId}/votes/{uid}) ────
+
+export function votesRef(
+  eventId: string,
+  performanceId: string
+): CollectionReference<Vote> {
+  return collection(
+    db,
+    "events",
+    eventId,
+    "performances",
+    performanceId,
+    "votes"
+  ).withConverter(voteConverter);
+}
+
+export function voteRef(
+  eventId: string,
+  performanceId: string,
+  uid: string
+): DocumentReference<Vote> {
+  return doc(
+    db,
+    "events",
+    eventId,
+    "performances",
+    performanceId,
+    "votes",
+    uid
+  ).withConverter(voteConverter);
+}
+

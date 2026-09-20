@@ -55,10 +55,10 @@ export default function StudentsPage() {
   const { departments } = useDepartments();
   const { config } = useAppConfig();
 
-  const availableSections = useMemo(() => {
+  const availableSections = useMemo<string[]>(() => {
     return config?.sections && config.sections.length > 0
       ? config.sections
-      : DEFAULT_SECTIONS;
+      : [...DEFAULT_SECTIONS];
   }, [config?.sections]);
 
   // Stats

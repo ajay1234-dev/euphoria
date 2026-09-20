@@ -3,14 +3,21 @@
  * Does NOT import "server-only" — scripts run in Node directly, not Next.js.
  */
 import * as admin from "firebase-admin";
+import * as dotenv from "dotenv";
+import { resolve } from "path";
+
+dotenv.config({ path: resolve(process.cwd(), ".env.local") });
+dotenv.config({ path: resolve(process.cwd(), ".env") });
 
 let _app: admin.app.App | null = null;
 
 export function getScriptAdminApp(): admin.app.App {
   if (_app) return _app;
 
-  if (admin.apps.length > 0) {
-    _app = admin.app();
+  const adminSdk = (admin as unknown as { default?: typeof admin }).default || admin;
+
+  if (adminSdk.apps && adminSdk.apps.length > 0) {
+    _app = adminSdk.app();
     return _app;
   }
 
@@ -29,8 +36,8 @@ export function getScriptAdminApp(): admin.app.App {
 
   if (!isEmulator && clientEmail && privateKey && !privateKey.includes("...")) {
     try {
-      _app = admin.initializeApp({
-        credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+      _app = adminSdk.initializeApp({
+        credential: adminSdk.credential.cert({ projectId, clientEmail, privateKey }),
         projectId,
       });
       return _app;
@@ -39,7 +46,7 @@ export function getScriptAdminApp(): admin.app.App {
     }
   }
 
-  _app = admin.initializeApp({
+  _app = adminSdk.initializeApp({
     projectId,
   });
 
@@ -47,9 +54,11 @@ export function getScriptAdminApp(): admin.app.App {
 }
 
 export function getScriptDb(): admin.firestore.Firestore {
-  return admin.firestore(getScriptAdminApp());
+  const adminSdk = (admin as unknown as { default?: typeof admin }).default || admin;
+  return adminSdk.firestore(getScriptAdminApp());
 }
 
 export function getScriptAuth(): admin.auth.Auth {
-  return admin.auth(getScriptAdminApp());
+  const adminSdk = (admin as unknown as { default?: typeof admin }).default || admin;
+  return adminSdk.auth(getScriptAdminApp());
 }

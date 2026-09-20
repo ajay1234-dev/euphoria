@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { resolveRoute, isRouteAllowed } from "@/lib/auth/resolveRoute";
@@ -13,22 +13,33 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requireReady = true }: AuthGuardProps) {
-  const { status } = useAuth();
+  const { status, user, studentProfile, refreshAuth } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === "loading" || refreshing) return;
+
+    // If already ready or studentProfile is present, stay on page
+    if (status === "ready" || !!studentProfile) return;
 
     if (requireReady && !isRouteAllowed(status, pathname)) {
+      // If user is authenticated with Google, re-check Firestore before kicking out
+      if (user && status === "needs-profile") {
+        setRefreshing(true);
+        refreshAuth().finally(() => setRefreshing(false));
+        return;
+      }
+
       const target = resolveRoute(status);
       if (target && target !== pathname) {
         router.replace(target);
       }
     }
-  }, [status, pathname, router, requireReady]);
+  }, [status, pathname, router, requireReady, user, studentProfile, refreshAuth, refreshing]);
 
-  if (status === "loading") return <PageSkeleton />;
+  if (status === "loading" || refreshing) return <PageSkeleton />;
 
   return <>{children}</>;
 }
@@ -53,3 +64,25 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
+/**
+ * OrganizerGuard — protects /organizer/dashboard.
+ * Organizers and Admins can access.
+ */
+export function OrganizerGuard({ children }: { children: React.ReactNode }) {
+  const { status } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status !== "organizer" && status !== "admin") {
+      router.replace("/organizer/login");
+    }
+  }, [status, router]);
+
+  if (status === "loading") return <PageSkeleton />;
+  if (status !== "organizer" && status !== "admin") return null;
+
+  return <>{children}</>;
+}
+

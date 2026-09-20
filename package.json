@@ -3,15 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node --use-system-ca ./node_modules/next/dist/bin/next dev",
+    "build": "node --use-system-ca ./node_modules/next/dist/bin/next build",
+    "start": "node --use-system-ca ./node_modules/next/dist/bin/next start",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "emulators": "firebase emulators:start",
     "test:rules": "firebase emulators:exec --only firestore \"vitest run tests/rules\"",
     "bootstrap": "tsx scripts/bootstrap.ts",
     "set-admin": "tsx scripts/set-admin.ts",
+    "set-organizer": "tsx scripts/set-organizer.ts",
+    "create-staff": "tsx scripts/create-staff.ts",
     "seed:emulator": "tsx scripts/seed-emulator.ts"
   },
   "dependencies": {
@@ -37,6 +39,7 @@
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.468.0",
     "next": "16.3.5",
+    "ogl": "^1.0.11",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.88.0",

@@ -12,6 +12,7 @@ import {
   validateCollegeIdentity,
   validateStudentRegistrationData,
   formatYearLabel,
+  extractStudentNameFromIdentity,
 } from "../../src/config/departments";
 
 describe("College Department Verification & Code Extraction", () => {
@@ -169,7 +170,6 @@ describe("College Department Verification & Code Extraction", () => {
         name: "Ada Lovelace",
         year: 2,
         section: "A",
-        availableSections: ["A", "B", "C"],
       });
       expect(valid.isValid).toBe(true);
 
@@ -177,7 +177,6 @@ describe("College Department Verification & Code Extraction", () => {
         name: "A",
         year: 2,
         section: "A",
-        availableSections: ["A", "B", "C"],
       });
       expect(shortName.isValid).toBe(false);
 
@@ -185,24 +184,36 @@ describe("College Department Verification & Code Extraction", () => {
         name: "Ada Lovelace",
         year: 5 as any,
         section: "A",
-        availableSections: ["A", "B", "C"],
       });
       expect(invalidYear.isValid).toBe(false);
+
+      const firstYear = validateStudentRegistrationData({
+        name: "Ada Lovelace",
+        year: 1,
+        section: "A",
+      });
+      expect(firstYear.isValid).toBe(false);
 
       const invalidSec = validateStudentRegistrationData({
         name: "Ada Lovelace",
         year: 2,
-        section: "Z",
-        availableSections: ["A", "B", "C"],
+        section: "",
       });
       expect(invalidSec.isValid).toBe(false);
+
+      const invalidSecC = validateStudentRegistrationData({
+        name: "Ada Lovelace",
+        year: 2,
+        section: "C",
+      });
+      expect(invalidSecC.isValid).toBe(false);
     });
 
     it("validates college identity via validateCollegeIdentity", () => {
       const validStudent = validateCollegeIdentity("311523205004@student.msec.edu.in");
       expect(validStudent.isValid).toBe(true);
-      expect(validStudent.extractedRegisterNumber).toBe("311523205004");
-      expect(validStudent.extractedCode).toBe("205");
+      expect(validStudent.registerNumber).toBe("311523205004");
+      expect(validStudent.departmentCode).toBe("205");
       expect(validStudent.department?.shortCode).toBe("IT");
 
       const invalidDomain = validateCollegeIdentity("311523205004@gmail.com");
@@ -210,7 +221,31 @@ describe("College Department Verification & Code Extraction", () => {
 
       const unknownCode = validateCollegeIdentity("311523999004@msec.edu.in");
       expect(unknownCode.isValid).toBe(false);
-      expect(unknownCode.errorMessage).toContain("unrecognized");
+      expect(unknownCode.error).toBeDefined();
+    });
+
+    it("extracts clean student names via extractStudentNameFromIdentity", () => {
+      // 1. From email with name and register number
+      expect(
+        extractStudentNameFromIdentity("prabhakar.311523205004@student.msec.edu.in")
+      ).toBe("Prabhakar");
+
+      expect(
+        extractStudentNameFromIdentity("prabhakar_venkat.311523205004@msec.edu.in")
+      ).toBe("Prabhakar Venkat");
+
+      // 2. From displayName containing both name and register number
+      expect(
+        extractStudentNameFromIdentity(
+          "311523205004@msec.edu.in",
+          "311523205004 - Prabhakar Venkat"
+        )
+      ).toBe("Prabhakar Venkat");
+
+      // 3. When displayName is literally just the 12-digit register number, returns empty string so user fills real name
+      expect(
+        extractStudentNameFromIdentity("311523205004@msec.edu.in", "311523205004")
+      ).toBe("");
     });
   });
 });

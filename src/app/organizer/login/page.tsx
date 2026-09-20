@@ -20,8 +20,8 @@ export default function OrganizerLoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (status === "admin") {
-      router.replace("/admin/performances");
+    if (status === "admin" || status === "organizer") {
+      router.replace("/organizer/dashboard");
     }
   }, [status, router]);
 
@@ -48,13 +48,13 @@ export default function OrganizerLoginPage() {
       // Refresh token to verify staff credentials
       const tokenResult = await getIdTokenResult(credential.user, true);
 
-      if (!tokenResult.claims["admin"]) {
+      if (!tokenResult.claims["organizer"] && !tokenResult.claims["admin"]) {
         await auth.signOut();
-        setServerError("This account is not authorized as an event organizer.");
+        setServerError("This account is not authorized as an event organizer. Please use an organizer account.");
         return;
       }
 
-      router.replace("/admin/performances");
+      router.replace("/organizer/dashboard");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (

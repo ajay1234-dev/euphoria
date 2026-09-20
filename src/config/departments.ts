@@ -123,18 +123,14 @@ export const OFFICIAL_DEPARTMENTS_LIST: OfficialDepartment[] = Object.values(
 
 /**
  * Official College Student Email Regex
- * Matches 12-digit register number + @msec.edu.in (or @student.msec.edu.in)
- * Examples: 311523205004@msec.edu.in, 243115205006@msec.edu.in
+ * Matches emails on @msec.edu.in or @student.msec.edu.in containing a 12-digit register number.
+ * Examples:
+ *  - 311523205004@msec.edu.in
+ *  - 311523205004@student.msec.edu.in
+ *  - prabhakar.311523205004@student.msec.edu.in
+ *  - 311523205004.prabhakar@msec.edu.in
  */
-export const COLLEGE_EMAIL_REGEX = /^[0-9]{12}@(student\.)?msec\.edu\.in$/i;
-
-/**
- * Validate that an email is an official 12-digit college student Google email.
- */
-export function isValidCollegeEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return COLLEGE_EMAIL_REGEX.test(email.trim().toLowerCase());
-}
+export const COLLEGE_EMAIL_DOMAIN_REGEX = /@(student\.)?msec\.edu\.in$/i;
 
 /**
  * Checks if domain belongs to official college domains.
@@ -146,13 +142,82 @@ export function isCollegeEmailDomain(domain: string): boolean {
 
 /**
  * Extract 12-digit register number from email local-part.
- * Example: '311523205004@msec.edu.in' -> '311523205004'
+ * Examples:
+ *  - '311523205004@msec.edu.in' -> '311523205004'
+ *  - 'prabhakar.311523205004@student.msec.edu.in' -> '311523205004'
+ *  - '311523205004.arun@msec.edu.in' -> '311523205004'
  */
 export function extractRegisterNumber(email: string): string | null {
   if (!email || !email.includes("@")) return null;
   const clean = email.trim().toLowerCase();
-  if (!isValidCollegeEmail(clean)) return null;
-  return clean.split("@")[0];
+  const [local, domain] = clean.split("@");
+  if (!domain || !isCollegeEmailDomain(domain)) return null;
+
+  // Search for an exact 12-digit sequence in the local part
+  const match = local.match(/(?:^|\D)(\d{12})(?:\D|$)/);
+  if (!match) return null;
+  return match[1];
+}
+
+/**
+ * Validate that an email is an official college Google email containing a 12-digit register number.
+ */
+export function isValidCollegeEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const reg = extractRegisterNumber(email);
+  return !!reg && isValidRegisterNumber(reg);
+}
+
+/**
+ * Extracts a clean Student Name from Google identity metadata:
+ * - Extracts alphabetic name parts from Google displayName (excluding the 12-digit reg number)
+ * - Or extracts alphabetic name parts from the email local-part (e.g. 'prabhakar' from 'prabhakar.311523205004@...')
+ * - Never returns a raw 12-digit register number as the name.
+ */
+export function extractStudentNameFromIdentity(
+  email: string,
+  displayName?: string | null
+): string {
+  const regNo = extractRegisterNumber(email) || "";
+
+  // 1. Try extracting name from displayName if it contains letters
+  if (displayName && /[a-zA-Z]/.test(displayName)) {
+    let cleaned = displayName;
+    if (regNo) {
+      cleaned = cleaned.replace(new RegExp(regNo, "g"), "");
+    }
+    // Strip punctuation and numbers
+    cleaned = cleaned.replace(/[\d_()\-#@.,/]/g, " ").trim();
+    cleaned = cleaned.replace(/\s+/g, " ");
+    if (cleaned.length >= 2) {
+      return toTitleCase(cleaned);
+    }
+  }
+
+  // 2. Try extracting from email local-part if it contains letters
+  if (email && email.includes("@")) {
+    const local = email.split("@")[0];
+    let namePart = local;
+    if (regNo) {
+      namePart = namePart.replace(new RegExp(regNo, "g"), "");
+    }
+    namePart = namePart.replace(/[\d._\-+]/g, " ").trim();
+    namePart = namePart.replace(/\s+/g, " ");
+    if (namePart.length >= 2) {
+      return toTitleCase(namePart);
+    }
+  }
+
+  // 3. Fallback: if only digits were found, return empty string so user fills in their real name
+  return "";
+}
+
+function toTitleCase(str: string): string {
+  return str
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
 }
 
 /**
@@ -372,10 +437,9 @@ export function validateCollegeIdentity(email: string | null | undefined): Colle
 }
 
 /**
- * Year Selection Options
+ * Year Selection Options (Only 2nd, 3rd, and 4th years are eligible)
  */
 export const YEAR_OPTIONS = [
-  { value: 1, label: "First Year" },
   { value: 2, label: "Second Year" },
   { value: 3, label: "Third Year" },
   { value: 4, label: "Fourth Year" },
@@ -400,9 +464,9 @@ export function formatYearLabel(year: number | string | undefined | null): strin
 }
 
 /**
- * Default Sections (configurable in app settings)
+ * Default Sections (configurable in app settings - sections A and B alone)
  */
-export const DEFAULT_SECTIONS = ["A", "B", "C"] as const;
+export const DEFAULT_SECTIONS = ["A", "B"] as const;
 
 export interface StudentRegistrationInput {
   name?: string;
@@ -425,13 +489,13 @@ export function validateStudentRegistrationData(data: StudentRegistrationInput):
   }
 
   const yearNum = Number(data.year);
-  if (!yearNum || ![1, 2, 3, 4].includes(yearNum)) {
-    return { isValid: false, error: "Please select your year." };
+  if (!yearNum || ![2, 3, 4].includes(yearNum)) {
+    return { isValid: false, error: "Please select your year (2nd, 3rd, or 4th Year)." };
   }
 
   const section = (data.section ?? "").trim().toUpperCase();
-  if (!section) {
-    return { isValid: false, error: "Please select your section." };
+  if (!section || !["A", "B"].includes(section)) {
+    return { isValid: false, error: "Please select your section (Section A or B)." };
   }
 
   if (data.departmentCode && data.registerNumber) {

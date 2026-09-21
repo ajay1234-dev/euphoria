@@ -555,6 +555,7 @@ export default function RegisterPage() {
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
                 >
                   <option value="">Select Section</option>
+                  <option value="NONE">No Section</option>
                   {availableSections.map((sec) => (
                     <option key={sec} value={sec}>
                       Section {sec}
@@ -621,7 +622,7 @@ export default function RegisterPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-emerald-800">Section:</span>
-                    <span className="font-bold text-slate-900">Section {selectedSection}</span>
+                    <span className="font-bold text-slate-900">{selectedSection === "NONE" ? "No Section" : `Section ${selectedSection}`}</span>
                   </div>
                 </div>
               </div>
@@ -699,7 +700,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Section:</span>
-                  <span className="font-bold text-slate-900">Section {registeredSummary.section}</span>
+                  <span className="font-bold text-slate-900">{registeredSummary.section === "NONE" ? "No Section" : `Section ${registeredSummary.section}`}</span>
                 </div>
               </div>
 

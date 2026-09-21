@@ -494,8 +494,8 @@ export function validateStudentRegistrationData(data: StudentRegistrationInput):
   }
 
   const section = (data.section ?? "").trim().toUpperCase();
-  if (!section || !["A", "B"].includes(section)) {
-    return { isValid: false, error: "Please select your section (Section A or B)." };
+  if (!section || !["A", "B", "NONE"].includes(section)) {
+    return { isValid: false, error: "Please select your section." };
   }
 
   if (data.departmentCode && data.registerNumber) {

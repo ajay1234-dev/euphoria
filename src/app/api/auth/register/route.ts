@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Please select a valid academic year (1, 2, 3, or 4)." }, { status: 400 });
   }
 
-  if (!["A", "B", "C", "D"].includes(section)) {
+  if (!["A", "B", "C", "D", "NONE"].includes(section)) {
     return NextResponse.json({ ok: false, error: "Please select a valid section." }, { status: 400 });
   }
 

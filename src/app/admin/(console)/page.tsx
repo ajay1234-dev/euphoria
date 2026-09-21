@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAppConfig, useActiveEvent, useDepartments, useCategories, usePerformances } from "@/hooks/useData";
 import { useVotingState } from "@/hooks/useVotingState";
-import { updateAppConfig } from "@/lib/admin/settings";
+import { updateAppConfig, updateRegistrationStatus } from "@/lib/admin/settings";
 import { getStudentStats } from "@/lib/admin/students";
 import { getCategories } from "@/lib/admin/categories";
 import {
@@ -223,27 +223,17 @@ export default function AdminOverviewPage() {
 
   // Handle Registration Open / Closed toggle cleanly without page reload
   const handleToggleRegistration = async (open: boolean) => {
-    if (!config) return;
     setUpdatingRegistration(true);
     try {
-      await updateAppConfig({
-        festName: config.festName,
-        activeEventId: config.activeEventId,
-        allowedEmailDomains: config.allowedEmailDomains,
-        blockPlusAddressing: config.blockPlusAddressing,
-        requireStudentId: config.requireStudentId,
-        studentIdPattern: config.studentIdPattern,
-        registrationOpen: open,
-        sections: config.sections,
-      });
+      await updateRegistrationStatus(open);
       toast.success(
         open
           ? "Student Registration is now OPEN! College students can register."
           : "Student Registration is now CLOSED! Signups paused."
       );
     } catch (err: unknown) {
-      toast.error("Failed to update registration status");
-      console.error(err);
+      toast.error("Failed to update registration status. Please try again.");
+      console.error("[handleToggleRegistration]", err);
     } finally {
       setUpdatingRegistration(false);
     }

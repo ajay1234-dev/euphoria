@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
@@ -46,14 +46,14 @@ export async function POST(req: NextRequest) {
       const activePerformanceId = state.activePerformanceId as string;
       const currentEndsAt = state.votingEndsAt as Timestamp;
       const currentMs = currentEndsAt ? currentEndsAt.toMillis() : Date.now();
-      const newEndsAt = Timestamp.fromDate(
-        new Date(Math.max(Date.now(), currentMs) + additionalSeconds * 1000)
-      );
+      const newEndsAtMs = Math.max(Date.now(), currentMs) + additionalSeconds * 1000;
+      const newEndsAt = Timestamp.fromMillis(newEndsAtMs);
 
       const perfRef = adminDb.doc(`events/${eventId}/performances/${activePerformanceId}`);
 
       tx.update(stateRef, {
         votingEndsAt: newEndsAt,
+        endsAtMs: newEndsAtMs,
         updatedAt: FieldValue.serverTimestamp(),
       });
       tx.update(perfRef, {

@@ -126,6 +126,9 @@ export interface VotingState {
   /** Server timestamp when voting was opened (Phase 2) */
   votingStartedAt?: Timestamp | null;
   votingEndsAt: Timestamp | null;
+  durationSeconds?: number;
+  startedAtMs?: number;
+  endsAtMs?: number;
   updatedAt: Timestamp;
 }
 

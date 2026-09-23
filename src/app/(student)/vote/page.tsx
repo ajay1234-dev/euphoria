@@ -24,27 +24,7 @@ import { getPerformanceImage } from "@/config/constants";
 import PeekRating from "@/components/ui/PeekRating";
 
 
-// ── Countdown Hook (uses server offset to prevent client clock tampering) ──────
-function useCountdown(endsAtMs: number | null, serverOffsetMs: number = 0): number {
-  const [remaining, setRemaining] = useState(0);
-
-  useEffect(() => {
-    if (!endsAtMs) {
-      setRemaining(0);
-      return;
-    }
-    const tick = () => {
-      const serverNow = Date.now() + serverOffsetMs;
-      const diff = Math.max(0, Math.round((endsAtMs - serverNow) / 1000));
-      setRemaining(diff);
-    };
-    tick();
-    const id = setInterval(tick, 500);
-    return () => clearInterval(id);
-  }, [endsAtMs, serverOffsetMs]);
-
-  return remaining;
-}
+import { useCountdown } from "@/hooks/useCountdown";
 
 const RATING_DESCRIPTIONS: Record<number, string> = {
   1: "20% · Needs Improvement",

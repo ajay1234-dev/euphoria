@@ -41,16 +41,28 @@ export async function POST(req: NextRequest) {
     const stateRef = adminDb.doc(`events/${eventId}/state/current`);
     const perfRef = adminDb.doc(`events/${eventId}/performances/${performanceId}`);
 
-    // 3. Transactional start - reject if another performance is already ACTIVE
     const now = new Date();
-    const votingEndsAt = Timestamp.fromDate(new Date(now.getTime() + durationSeconds * 1000));
+    const nowMs = now.getTime();
+    const endsAtMs = nowMs + durationSeconds * 1000;
+    const votingStartedAt = Timestamp.fromMillis(nowMs);
+    const votingEndsAt = Timestamp.fromMillis(endsAtMs);
 
     await adminDb.runTransaction(async (tx) => {
       const stateSnap = await tx.get(stateRef);
       if (stateSnap.exists) {
         const current = stateSnap.data();
         if (current?.status === "open") {
-          throw new Error(`Another performance is already live (id: ${current.activePerformanceId}). Stop it first.`);
+          // If the previous performance voting window has already ended, auto-close it
+          const previousEndsAt = current.votingEndsAt?.toMillis?.() ?? 0;
+          if (previousEndsAt > 0 && previousEndsAt <= nowMs) {
+            const prevPerfId = current.activePerformanceId;
+            if (prevPerfId && prevPerfId !== performanceId) {
+              const prevPerfRef = adminDb.doc(`events/${eventId}/performances/${prevPerfId}`);
+              tx.set(prevPerfRef, { status: "completed", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+            }
+          } else if (current.activePerformanceId && current.activePerformanceId !== performanceId) {
+            throw new Error(`Another performance is already live on stage. Please stop it first.`);
+          }
         }
       }
 
@@ -58,27 +70,33 @@ export async function POST(req: NextRequest) {
       if (!perfSnap.exists) {
         throw new Error(`Performance ${performanceId} not found`);
       }
-      if (perfSnap.data()?.status !== "scheduled") {
-        throw new Error(`Performance is not in scheduled state (current: ${perfSnap.data()?.status})`);
-      }
 
       tx.set(stateRef, {
         status: "open",
         activePerformanceId: performanceId,
-        votingStartedAt: FieldValue.serverTimestamp(),
+        durationSeconds,
+        startedAtMs: nowMs,
+        endsAtMs,
+        votingStartedAt,
         votingEndsAt,
         updatedAt: FieldValue.serverTimestamp(),
       });
 
-      tx.update(perfRef, {
+      tx.set(perfRef, {
         status: "live",
-        votingStartedAt: FieldValue.serverTimestamp(),
+        votingStartedAt,
         votingEndsAt,
         updatedAt: FieldValue.serverTimestamp(),
-      });
+      }, { merge: true });
     });
 
-    return NextResponse.json({ ok: true, message: "Voting started", durationSeconds });
+    return NextResponse.json({
+      ok: true,
+      message: "Voting started",
+      durationSeconds,
+      endsAtMs,
+      serverTime: nowMs,
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[API /voting/start]", msg);

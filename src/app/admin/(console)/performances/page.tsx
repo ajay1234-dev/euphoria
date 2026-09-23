@@ -75,27 +75,7 @@ const PRESET_IMAGES = [
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120];
 
-// Countdown timer helper
-function useCountdown(endsAtMs: number | null, serverOffsetMs: number = 0): number {
-  const [remaining, setRemaining] = useState(0);
-
-  useEffect(() => {
-    if (!endsAtMs) {
-      setRemaining(0);
-      return;
-    }
-    const tick = () => {
-      const serverNow = Date.now() + serverOffsetMs;
-      const diff = Math.max(0, Math.round((endsAtMs - serverNow) / 1000));
-      setRemaining(diff);
-    };
-    tick();
-    const id = setInterval(tick, 500);
-    return () => clearInterval(id);
-  }, [endsAtMs, serverOffsetMs]);
-
-  return remaining;
-}
+import { useCountdown } from "@/hooks/useCountdown";
 
 export default function PerformancesPage() {
   const { config } = useAppConfig();
@@ -241,9 +221,28 @@ export default function PerformancesPage() {
   };
 
   // Auto-stop voting automatically when timer expires
+  const hasActiveTickRef = useRef(false);
   const autoStoppedRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!isOpen || !eventId || !activeId || remaining > 0 || !endsAtMs) return;
+    if (!isOpen) {
+      hasActiveTickRef.current = false;
+      autoStoppedRef.current = null;
+    }
+  }, [isOpen, activeId]);
+
+  useEffect(() => {
+    if (isOpen && remaining > 0) {
+      hasActiveTickRef.current = true;
+    }
+  }, [isOpen, remaining]);
+
+  useEffect(() => {
+    if (!isOpen || !eventId || !activeId || !endsAtMs) return;
+    if (remaining > 0) return;
+    if (!hasActiveTickRef.current) return;
+    const serverNow = Date.now() + serverOffsetMs;
+    if (serverNow < endsAtMs) return;
     if (autoStoppedRef.current === activeId) return;
     autoStoppedRef.current = activeId;
 
@@ -261,7 +260,7 @@ export default function PerformancesPage() {
       }
     };
     autoStop();
-  }, [isOpen, eventId, activeId, remaining, endsAtMs]);
+  }, [isOpen, eventId, activeId, remaining, endsAtMs, serverOffsetMs]);
 
   const handleExtendVoting = async (extraSeconds: number) => {
     if (!eventId) return;

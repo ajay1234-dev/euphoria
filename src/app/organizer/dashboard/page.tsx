@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signOut } from "firebase/auth";
@@ -10,20 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAppConfig, usePerformances, useDepartments, useCategories } from "@/hooks/useData";
 import { useVotingState } from "@/hooks/useVotingState";
 import { PageSkeleton } from "@/components/common/PageSkeleton";
-import {
-  Timer,
-  BarChart3,
-  LogOut,
-  Maximize2,
-  Minimize2,
-  Users,
-  Star,
-  Music,
-  Sparkles,
-  Radio,
-  Clock,
-  ChevronRight,
-} from "lucide-react";
+import { stopPerformanceVoting } from "@/lib/admin/stage";
+
 import type { Performance } from "@/types/firestore";
 
 interface PerfWithId extends Performance {
@@ -66,7 +54,6 @@ export default function OrganizerDashboardPage() {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [liveVotes, setLiveVotes] = useState(0);
-  const [liveAvg, setLiveAvg] = useState(0);
 
   const performances = rawPerfs as PerfWithId[];
   const deptMap = Object.fromEntries(departments.map((d) => [d.id, d]));
@@ -78,6 +65,25 @@ export default function OrganizerDashboardPage() {
 
   const endsAtMs = votingState?.votingEndsAt ? votingState.votingEndsAt.toMillis() : null;
   const remaining = useCountdown(isOpen ? endsAtMs : null, serverOffsetMs);
+
+  // Auto-stop voting when timer expires
+  const autoStoppedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isOpen || !eventId || !activeId || remaining > 0 || !endsAtMs) return;
+    if (autoStoppedRef.current === activeId) return;
+    autoStoppedRef.current = activeId;
+
+    const autoStop = async () => {
+      try {
+        const idToken = await auth.currentUser?.getIdToken(true);
+        if (!idToken) return;
+        await stopPerformanceVoting(eventId, activeId, idToken);
+      } catch (err) {
+        console.error("[organizer/dashboard] Auto-stop error:", err);
+      }
+    };
+    autoStop();
+  }, [isOpen, eventId, activeId, remaining, endsAtMs]);
 
   // Scheduled acts upcoming
   const upcomingActs = performances.filter((p) => p.status === "scheduled");
@@ -109,21 +115,13 @@ export default function OrganizerDashboardPage() {
   useEffect(() => {
     if (!isOpen || !eventId || !activeId) {
       setLiveVotes(0);
-      setLiveAvg(0);
       return;
     }
     const votesCol = collection(db, "events", eventId, "performances", activeId, "votes");
     const unsub = onSnapshot(
       votesCol,
       (snap) => {
-        let totalPoints = 0;
-        snap.forEach((doc) => {
-          const r = (doc.data().rating as number) ?? 0;
-          if (r >= 1 && r <= 5) totalPoints += r;
-        });
-        const total = snap.size;
-        setLiveVotes(total);
-        setLiveAvg(total > 0 ? totalPoints / total : 0);
+        setLiveVotes(snap.size);
       },
       () => {
         // silent fallback — no permission to list votes
@@ -148,36 +146,31 @@ export default function OrganizerDashboardPage() {
   const activeCat = activePerf?.categoryId ? catMap[activePerf.categoryId] : null;
 
   return (
-    <div
-      className="min-h-dvh flex flex-col justify-between text-white selection:bg-purple-500 selection:text-white overflow-hidden relative"
-      style={{
-        background: "linear-gradient(180deg, #07060F 0%, #0E0A1E 50%, #080612 100%)",
-      }}
-    >
-      {/* Ambient background glow for auditorium projection */}
+    <div className="min-h-dvh flex flex-col justify-between bg-white text-slate-900 selection:bg-purple-100 selection:text-purple-900 overflow-hidden relative font-sans">
+      {/* Subtle ambient background glow for high-contrast auditorium projection */}
       <div
-        className="pointer-events-none absolute inset-0 z-0 opacity-40"
+        className="pointer-events-none absolute inset-0 z-0 opacity-60"
         style={{
           background: isOpen
-            ? "radial-gradient(circle at 50% 35%, rgba(124, 58, 237, 0.35) 0%, transparent 65%)"
-            : "radial-gradient(circle at 50% 35%, rgba(217, 119, 6, 0.2) 0%, transparent 65%)",
+            ? "radial-gradient(circle at 50% 35%, rgba(124, 58, 237, 0.08) 0%, transparent 65%)"
+            : "radial-gradient(circle at 50% 35%, rgba(245, 158, 11, 0.06) 0%, transparent 65%)",
         }}
       />
 
-      {/* Floating Projector Header (Clean, Minimal, Non-Intrusive) */}
-      <header className="relative z-20 flex items-center justify-between px-6 py-4 backdrop-blur-xs border-b border-white/10">
+      {/* Floating Projector Header (Clean White Auditorium Theme) */}
+      <header className="relative z-20 flex items-center justify-between px-6 py-4 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 border border-white/15 text-amber-300">
-            <Radio className="h-5 w-5 animate-pulse" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 border border-purple-200 text-purple-600">
+            <i className="bi bi-broadcast text-lg animate-pulse" />
           </div>
           <div>
             <span
-              className="text-base sm:text-lg font-black tracking-tight"
+              className="text-base sm:text-lg font-black tracking-tight text-slate-900"
               style={{ fontFamily: "var(--font-bricolage)" }}
             >
               {config?.festName ?? "Euphoria 2026"}
             </span>
-            <span className="hidden sm:inline text-xs text-white/50 ml-2 font-medium tracking-wide uppercase">
+            <span className="hidden sm:inline text-xs text-slate-500 ml-2 font-semibold tracking-wide uppercase">
               · Stage Projector Display 1
             </span>
           </div>
@@ -187,29 +180,29 @@ export default function OrganizerDashboardPage() {
         <div className="flex items-center gap-2.5">
           <Link
             href="/organizer/results"
-            className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-xs sm:text-sm font-bold text-white hover:bg-white/20 transition active:scale-95 shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-800 hover:bg-slate-100 transition active:scale-95 shadow-xs"
             title="Switch to Results Bar Chart view"
           >
-            <BarChart3 className="h-4 w-4 text-amber-300" />
+            <i className="bi bi-bar-chart-fill text-purple-600 text-sm" />
             <span>Results Bar Chart ↗</span>
           </Link>
 
           <button
             onClick={toggleFullscreen}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white/80 hover:text-white hover:bg-white/20 transition active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition active:scale-95 shadow-xs"
             title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             aria-label="Toggle Fullscreen"
           >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            <i className={isFullscreen ? "bi bi-fullscreen-exit text-sm" : "bi bi-fullscreen text-sm"} />
           </button>
 
           <button
             onClick={handleSignOut}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/50 hover:text-red-400 hover:bg-white/10 transition"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-red-600 hover:bg-red-50 transition shadow-xs"
             title="Sign out"
             aria-label="Sign out"
           >
-            <LogOut className="h-4 w-4" />
+            <i className="bi bi-box-arrow-right text-sm" />
           </button>
         </div>
       </header>
@@ -217,12 +210,12 @@ export default function OrganizerDashboardPage() {
       {/* Main Projector Arena */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 text-center max-w-6xl mx-auto w-full">
         {isOpen ? (
-          /* ── ACTIVE LIVE VOTING DISPLAY ── */
+          /* ── ACTIVE LIVE RATING DISPLAY ── */
           <div className="flex flex-col items-center justify-center space-y-6 sm:space-y-8 w-full animate-fade-in">
-            {/* Live Voting Status Pill */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-5 py-2 text-xs sm:text-sm font-black text-emerald-300 backdrop-blur-md shadow-lg shadow-emerald-500/10">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="tracking-widest uppercase">Live Audience Voting Open</span>
+            {/* Live Rating Status Pill */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 py-2 text-xs sm:text-sm font-black text-emerald-700 shadow-sm">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+              <span className="tracking-widest uppercase">Live Audience Rating &amp; Likes Open</span>
             </div>
 
             {/* Performance Title & Department Metadata */}
@@ -230,28 +223,28 @@ export default function OrganizerDashboardPage() {
               <div className="flex flex-wrap items-center justify-center gap-2.5">
                 {activeDept && (
                   <span
-                    className="rounded-full px-4 py-1 text-xs sm:text-sm font-bold shadow-md text-white"
+                    className="rounded-full px-4 py-1 text-xs sm:text-sm font-bold shadow-sm text-white"
                     style={{ backgroundColor: activeDept.color }}
                   >
                     {activeDept.name} ({activeDept.shortName})
                   </span>
                 )}
                 {activeCat && (
-                  <span className="rounded-full bg-purple-500/20 border border-purple-400/30 px-3.5 py-1 text-xs sm:text-sm font-semibold text-purple-200">
+                  <span className="rounded-full bg-purple-50 border border-purple-200 px-3.5 py-1 text-xs sm:text-sm font-semibold text-purple-700">
                     {activeCat.name}
                   </span>
                 )}
               </div>
 
               <h1
-                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-white drop-shadow-lg"
+                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 drop-shadow-xs"
                 style={{ fontFamily: "var(--font-bricolage)" }}
               >
                 {activePerf?.name ?? "Live Act"}
               </h1>
 
               {activePerf?.description && (
-                <p className="text-sm sm:text-lg text-white/70 max-w-2xl mx-auto font-medium line-clamp-2">
+                <p className="text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto font-medium line-clamp-2">
                   {activePerf.description}
                 </p>
               )}
@@ -259,69 +252,64 @@ export default function OrganizerDashboardPage() {
 
             {/* Giant Auditorium Countdown Clock */}
             <div className="py-2 flex flex-col items-center">
-              <div
-                className="font-mono text-7xl xs:text-8xl sm:text-9xl md:text-[140px] lg:text-[180px] font-black tabular-nums tracking-tighter transition-all duration-300 drop-shadow-2xl"
-                style={{
-                  color: remaining > 10 ? "#FFFFFF" : "#EF4444",
-                  textShadow:
-                    remaining > 10
-                      ? "0 0 40px rgba(168, 85, 247, 0.45)"
-                      : "0 0 50px rgba(239, 68, 68, 0.7)",
-                }}
-              >
-                {mins}:{secs}
+              <div className="rounded-3xl border-2 border-slate-200 bg-white shadow-2xl px-8 sm:px-16 py-4 sm:py-6">
+                <div
+                  className="font-mono text-7xl xs:text-8xl sm:text-9xl md:text-[130px] lg:text-[170px] font-black tabular-nums tracking-tighter transition-all duration-300"
+                  style={{
+                    color: remaining > 10 ? "#0F172A" : "#DC2626",
+                    textShadow:
+                      remaining > 10
+                        ? "0 2px 20px rgba(124, 58, 237, 0.12)"
+                        : "0 2px 25px rgba(220, 38, 38, 0.25)",
+                  }}
+                >
+                  {mins}:{secs}
+                </div>
               </div>
 
               {remaining === 0 && (
-                <div className="text-sm sm:text-lg font-bold text-amber-300 animate-pulse tracking-wide uppercase">
-                  Voting Closed · Finalizing audience tally…
+                <div className="mt-4 text-sm sm:text-lg font-bold text-amber-600 animate-pulse tracking-wide uppercase">
+                  Rating Closed · Finalizing audience tally…
                 </div>
               )}
             </div>
 
             {/* Live Audience Engagement Metrics */}
             <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-              <div className="inline-flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/20 px-6 py-3 text-base sm:text-lg font-extrabold backdrop-blur-md shadow-lg">
-                <Users className="h-5 w-5 text-purple-300" />
-                <span>{liveVotes} Live Votes Cast</span>
+              <div className="inline-flex items-center gap-2.5 rounded-2xl bg-slate-50 border border-slate-200 px-6 py-3 text-base sm:text-lg font-extrabold text-slate-800 shadow-sm">
+                <i className="bi bi-people-fill text-purple-600 text-lg" />
+                <span>{liveVotes} Live Ratings &amp; Likes Cast</span>
               </div>
-
-              {liveVotes > 0 && (
-                <div className="inline-flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/20 px-6 py-3 text-base sm:text-lg font-extrabold backdrop-blur-md shadow-lg text-amber-300">
-                  <Star className="h-5 w-5 fill-amber-300 text-amber-300" />
-                  <span>Avg: {liveAvg.toFixed(2)} ★</span>
-                </div>
-              )}
             </div>
           </div>
         ) : (
           /* ── STANDBY / IDLE STATE (Between acts) ── */
           <div className="flex flex-col items-center justify-center space-y-8 w-full max-w-3xl animate-fade-in py-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/5 border border-white/15 text-amber-300 shadow-2xl">
-              <Sparkles className="h-10 w-10 animate-spin-slow" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-50 border border-amber-200 text-amber-600 shadow-lg">
+              <i className="bi bi-stars text-3xl animate-spin-slow" />
             </div>
 
             <div className="space-y-3">
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-amber-400">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-purple-600">
                 Live Cultural Festival Stage
               </span>
               <h1
-                className="text-4xl sm:text-6xl md:text-7xl font-black text-white tracking-tight drop-shadow-md"
+                className="text-4xl sm:text-6xl md:text-7xl font-black text-slate-900 tracking-tight"
                 style={{ fontFamily: "var(--font-bricolage)" }}
               >
                 {config?.festName ?? "Euphoria 2026"}
               </h1>
-              <p className="text-base sm:text-xl text-white/70 font-medium max-w-xl mx-auto">
-                Stage ready · Waiting for administrator to start the next performance voting window.
+              <p className="text-base sm:text-xl text-slate-600 font-medium max-w-xl mx-auto">
+                Stage ready · Waiting for administrator to start the next performance rating window.
               </p>
             </div>
 
             {/* Upcoming Schedule Teaser for the Audience */}
             {upcomingActs.length > 0 && (
-              <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-5 text-left backdrop-blur-md space-y-3 shadow-xl">
-                <div className="flex items-center justify-between text-xs font-bold text-white/60 uppercase tracking-wider">
+              <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-lg space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <span>Up Next on Stage</span>
-                  <span>{upcomingActs.length} Scheduled Acts</span>
+                  <span className="text-purple-600">{upcomingActs.length} Scheduled Acts</span>
                 </div>
                 <div className="space-y-2">
                   {upcomingActs.slice(0, 3).map((act, index) => {
@@ -329,13 +317,13 @@ export default function OrganizerDashboardPage() {
                     return (
                       <div
                         key={act.id}
-                        className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-3"
+                        className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 p-3"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-white/70">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700">
                             {index + 1}
                           </span>
-                          <span className="text-sm font-bold text-white truncate">{act.name}</span>
+                          <span className="text-sm font-bold text-slate-900 truncate">{act.name}</span>
                         </div>
                         {dept && (
                           <span
@@ -356,7 +344,7 @@ export default function OrganizerDashboardPage() {
       </main>
 
       {/* Subtle Projector Footer */}
-      <footer className="relative z-20 flex items-center justify-between px-6 py-3 border-t border-white/10 text-[11px] text-white/40">
+      <footer className="relative z-20 flex items-center justify-between px-6 py-3 border-t border-slate-200 text-[11px] text-slate-400 bg-white/80">
         <span>Auditorium Projector Feed · Controlled by Admin Console</span>
         <span>Meenakshi Sundararajan Engineering College</span>
       </footer>

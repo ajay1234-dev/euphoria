@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useAppConfig, useActiveEvent } from "@/hooks/useData";
-import { updateAppConfig } from "@/lib/admin/settings";
+import { updateAppConfig, updateEventGate } from "@/lib/admin/settings";
 import {
   getEvents,
   createEvent,
@@ -75,6 +75,8 @@ export default function SettingsPage() {
   const [requireStudentId, setRequireStudentId] = useState(false);
   const [studentIdPattern, setStudentIdPattern] = useState("");
   const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [eventOpen, setEventOpen] = useState(false);
+  const [savingEventOpen, setSavingEventOpen] = useState(false);
   const [sections, setSections] = useState<string[]>(["A", "B"]);
   const [newSectionInput, setNewSectionInput] = useState("");
   const [savingReg, setSavingReg] = useState(false);
@@ -118,6 +120,7 @@ export default function SettingsPage() {
       setRequireStudentId(config.requireStudentId);
       setStudentIdPattern(config.studentIdPattern || "");
       setRegistrationOpen(config.registrationOpen ?? true);
+      setEventOpen(config.eventOpen ?? false);
       setSections(config.sections && config.sections.length > 0 ? config.sections : ["A", "B"]);
     }
   }, [config]);
@@ -249,6 +252,7 @@ export default function SettingsPage() {
         requireStudentId,
         studentIdPattern: studentIdPattern.trim() || null,
         registrationOpen,
+        eventOpen,
         sections,
       });
       toast.success("Registration rules updated successfully");
@@ -257,6 +261,26 @@ export default function SettingsPage() {
       toast.error("Failed to update registration settings");
     } finally {
       setSavingReg(false);
+    }
+  };
+
+  /** Immediately persists the event open/closed gate to Firestore via server API */
+  const handleToggleEventOpen = async (open: boolean) => {
+    setEventOpen(open);
+    setSavingEventOpen(true);
+    try {
+      await updateEventGate(open);
+      toast.success(
+        open
+          ? "🟢 System OPEN — students can now access the voting dashboard"
+          : "🔴 System CLOSED — students see the Coming Soon screen"
+      );
+    } catch (err) {
+      console.error(err);
+      setEventOpen(!open); // revert on failure
+      toast.error("Failed to update event gate");
+    } finally {
+      setSavingEventOpen(false);
     }
   };
 
@@ -496,9 +520,46 @@ export default function SettingsPage() {
 
         {/* ── 2. REGISTRATION & DOMAINS TAB ── */}
         <TabsContent value="registration" className="space-y-6">
+          {/* ─── EVENT DAY GATE (most prominent, top of tab) ─── */}
+          <Card className={`border-2 ${eventOpen ? "border-emerald-400 bg-emerald-50" : "border-red-300 bg-red-50"}`}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <span className={`text-2xl`}>{eventOpen ? "🟢" : "🔴"}</span>
+                    Event Day System Gate
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    {eventOpen
+                      ? "System is OPEN — students can access the voting dashboard right now."
+                      : "System is CLOSED — students see the 'Coming Soon' lock screen. Enable this on the day of the fest."}
+                  </CardDescription>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Switch
+                    id="event-open"
+                    checked={eventOpen}
+                    onCheckedChange={handleToggleEventOpen}
+                    disabled={savingEventOpen || configLoading}
+                    className="scale-125"
+                  />
+                  <span className={`text-xs font-bold ${eventOpen ? "text-emerald-700" : "text-red-700"}`}>
+                    {savingEventOpen ? "Saving…" : eventOpen ? "OPEN" : "CLOSED"}
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-slate-500">
+                ⚠️ This is the master switch for the student portal. Turn it ON only on the day of the festival when you are ready to accept ratings &amp; likes.
+                Registration, admin dashboard, and organizer pages are unaffected by this toggle.
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
-              <CardTitle>Campus Email Domains & Constraints</CardTitle>
+              <CardTitle>Campus Email Domains &amp; Constraints</CardTitle>
               <CardDescription>
                 Enforced by Firestore Security Rules on every account creation without code redeploys
               </CardDescription>
@@ -542,7 +603,7 @@ export default function SettingsPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Only students with mailboxes on these domains will be permitted to register and vote.
+                  Only students with mailboxes on these domains will be permitted to register and submit ratings.
                 </p>
               </div>
 
@@ -552,7 +613,7 @@ export default function SettingsPage() {
                   <div className="space-y-0.5">
                     <Label htmlFor="block-plus">Block Plus-Addressing (+ aliases)</Label>
                     <p className="text-xs text-slate-500">
-                      Disallows <code>student+test@college.edu</code> to prevent duplicate vote accounts.
+                      Disallows <code>student+test@college.edu</code> to prevent duplicate rating accounts.
                     </p>
                   </div>
                   <Switch
@@ -595,7 +656,7 @@ export default function SettingsPage() {
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-500">
-                      When closed, new student registrations are disabled. Existing registered students can always log in and cast votes.
+                      When closed, new student registrations are disabled. Existing registered students can always log in and submit ratings &amp; likes.
                     </p>
                   </div>
                   <Switch

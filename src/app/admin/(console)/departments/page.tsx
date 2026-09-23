@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Plus, Edit2, Archive, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +32,7 @@ import {
   createDepartment,
   updateDepartment,
   archiveDepartment,
+  deleteDepartment,
 } from "@/lib/admin/departments";
 import type { Department } from "@/types/firestore";
 
@@ -54,8 +54,9 @@ export default function DepartmentsPage() {
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Archive confirmation
+  // Archive and Delete confirmation
   const [archiveTarget, setArchiveTarget] = useState<DepartmentWithId | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DepartmentWithId | null>(null);
 
   const fetchDepts = async () => {
     setLoading(true);
@@ -149,6 +150,19 @@ export default function DepartmentsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteDepartment(deleteTarget.id);
+      toast.success(`${deleteTarget.name} has been deleted`);
+      setDeleteTarget(null);
+      fetchDepts();
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete department");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -160,8 +174,8 @@ export default function DepartmentsPage() {
             Global list of participating college clubs, departments, and societies
           </p>
         </div>
-        <Button onClick={openCreateDialog} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Add Department
+        <Button onClick={openCreateDialog} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold">
+          <i className="bi bi-plus-lg text-sm" /> Add Department
         </Button>
       </div>
 
@@ -223,22 +237,31 @@ export default function DepartmentsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => openEditDialog(dept)}
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 text-slate-500 hover:text-slate-800"
                           title="Edit"
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <i className="bi bi-pencil text-sm" />
                         </Button>
                         {dept.isActive && (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setArchiveTarget(dept)}
-                            className="h-8 w-8 p-0 hover:text-red-600"
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-amber-600"
                             title="Archive"
                           >
-                            <Archive className="h-4 w-4" />
+                            <i className="bi bi-archive text-sm" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(dept)}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
+                          title="Delete Department"
+                        >
+                          <i className="bi bi-trash3 text-sm" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -292,8 +315,14 @@ export default function DepartmentsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Branding Color *</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex items-center justify-between">
+                  <Label>Bar Chart Color *</Label>
+                  <span className="text-[11px] text-purple-700 font-bold">Used for Auditorium Projector Bar Chart</span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Select the color representing this department&apos;s vertical bar and title on the live results screen.
+                </p>
+                <div className="flex flex-wrap gap-2 my-2">
                   {DEPARTMENT_SWATCHES.map((swatch) => (
                     <button
                       key={swatch.hex}
@@ -301,28 +330,35 @@ export default function DepartmentsPage() {
                       onClick={() => setColor(swatch.hex)}
                       className={`h-7 w-7 rounded-full border-2 transition-all flex items-center justify-center ${
                         color.toUpperCase() === swatch.hex.toUpperCase()
-                          ? "ring-2 ring-offset-2 ring-primary scale-110"
+                          ? "ring-2 ring-offset-2 ring-purple-600 scale-110"
                           : "opacity-80 hover:opacity-100"
                       }`}
                       style={{ backgroundColor: swatch.hex }}
                       title={swatch.label}
                     >
                       {color.toUpperCase() === swatch.hex.toUpperCase() && (
-                        <Check className="h-3 w-3 text-white stroke-[3]" />
+                        <i className="bi bi-check-lg text-white font-bold text-xs" />
                       )}
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="h-9 w-12 cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 shadow-xs"
+                    title="Click to choose custom bar chart color"
+                  />
                   <Input
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="#3B4CCA"
                     maxLength={7}
-                    className="font-mono uppercase text-sm w-36"
+                    className="font-mono uppercase text-sm w-32"
                   />
                   <div className="flex items-center gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
-                    <span>Preview:</span>
+                    <span>Projector Preview:</span>
                     <DepartmentChip
                       name={name || "Preview"}
                       shortName={shortName || "Preview"}
@@ -377,6 +413,17 @@ export default function DepartmentsPage() {
         description={`Are you sure you want to archive "${archiveTarget?.name}"? Its performances and student registrations will remain intact, but it will be hidden from new registrations.`}
         confirmLabel="Archive Department"
         onConfirm={handleArchive}
+      />
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Department?"
+        description={`Are you sure you want to permanently delete "${deleteTarget?.name}"? This department will be permanently removed from the system.`}
+        confirmLabel="Delete Department"
+        destructive
+        onConfirm={handleDelete}
       />
     </div>
   );

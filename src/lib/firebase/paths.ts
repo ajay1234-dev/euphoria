@@ -17,6 +17,7 @@ import type {
   VotingState,
   AdminDirectoryEntry,
   Vote,
+  ProjectionState,
 } from "@/types/firestore";
 import {
   appConfigConverter,
@@ -30,7 +31,9 @@ import {
   votingStateConverter,
   adminDirectoryEntryConverter,
   voteConverter,
+  projectionStateConverter,
 } from "./converters";
+
 
 // ── Singleton document paths ──────────────────────────────────────────────────
 
@@ -180,4 +183,15 @@ export function voteRef(
     uid
   ).withConverter(voteConverter);
 }
+
+// ── Projection State (events/{eventId}/projection/state) ──────────────────────
+
+export function projectionStateRef(
+  eventId: string
+): DocumentReference<ProjectionState> {
+  return doc(db, "events", eventId, "projection", "state").withConverter(
+    projectionStateConverter
+  );
+}
+
 

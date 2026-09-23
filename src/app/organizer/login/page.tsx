@@ -88,7 +88,7 @@ export default function OrganizerLoginPage() {
             Organizer Console
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-slate-600">
-            Stage managers, act coordinators &amp; voting timers
+            Stage managers, act coordinators &amp; rating timers
           </p>
         </div>
 

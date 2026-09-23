@@ -121,6 +121,29 @@ export const OFFICIAL_DEPARTMENTS_LIST: OfficialDepartment[] = Object.values(
   OFFICIAL_DEPARTMENTS
 ).sort((a, b) => a.order - b.order);
 
+export const SHORT_CODE_TO_DEPT_CODE: Record<string, string> = {
+  civil: "103",
+  cse: "104",
+  eee: "105",
+  ece: "106",
+  it: "205",
+  aids: "243",
+  "ai&ds": "243",
+  "ai-ds": "243",
+  mech: "114",
+  mechanical: "114",
+};
+
+export const DEPT_CODE_TO_SHORT_CODE: Record<string, string> = {
+  "103": "CIVIL",
+  "104": "CSE",
+  "105": "EEE",
+  "106": "ECE",
+  "205": "IT",
+  "243": "AIDS",
+  "114": "MECH",
+};
+
 /**
  * Official College Student Email Regex
  * Matches emails on @msec.edu.in or @student.msec.edu.in containing a 12-digit register number.

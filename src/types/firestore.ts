@@ -8,6 +8,8 @@ export interface AppConfig {
   requireStudentId: boolean;
   studentIdPattern: string | null;
   registrationOpen: boolean;
+  /** When false, students see the "Coming Soon" lock screen instead of voting UI */
+  eventOpen?: boolean;
   sections?: string[];
   updatedAt: Timestamp;
 }
@@ -98,6 +100,8 @@ export interface Performance {
   status: PerformanceStatus;
   votingStartedAt: Timestamp | null;
   votingEndsAt: Timestamp | null;
+  imageUrl?: string | null;
+  participants?: string | null;
   // ── Phase 2 aggregation fields (written server-side on Stop & Finalize) ──────
   totalVotes?: number;
   rating1Count?: number;
@@ -140,3 +144,47 @@ export interface Vote {
   rating: number; // 1 to 5
   createdAt: Timestamp;
 }
+
+export type ProjectionCommand =
+  | "IDLE"
+  | "START"
+  | "PAUSE"
+  | "RESUME"
+  | "REPLAY"
+  | "SKIP_TO_FINAL"
+  | "RESET";
+
+export type ProjectionStage =
+  | "Idle"
+  | "Revealing Department"
+  | "Third Place"
+  | "Playing Third Video"
+  | "Moving Third Video"
+  | "Second Place"
+  | "Playing Second Video"
+  | "Moving Second Video"
+  | "First Place"
+  | "Playing First Video"
+  | "Moving First Video"
+  | "Final Results"
+  | "IDLE"
+  | "WAITING"
+  | "REVEALING_DEPT"
+  | "THIRD_PLACE"
+  | "SECOND_PLACE"
+  | "FIRST_PLACE"
+  | "FINAL_RESULTS";
+
+
+export interface ProjectionState {
+  command: ProjectionCommand;
+  selectedSet: "set1" | "set2" | "set3";
+  currentStage: ProjectionStage;
+  currentDepartment?: string | null;
+  currentRank?: number | null;
+  currentIndex?: number;
+  revealSequenceId: string;
+  isTestMode?: boolean;
+  updatedAt: Timestamp;
+}
+

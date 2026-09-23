@@ -41,7 +41,7 @@ const HOW_IT_WORKS = [
     iconBg: "bg-amber-50 border-amber-100",
     title: "Real-Time Live Stage Window",
     description:
-      "As each stage act performs, the countdown clock begins. The voting arena opens instantly on your mobile screen for audience rating.",
+      "As each stage act performs, the countdown clock begins. The live rating and likes arena opens instantly on your mobile screen for audience engagement.",
   },
   {
     step: "03",
@@ -50,7 +50,7 @@ const HOW_IT_WORKS = [
     iconBg: "bg-emerald-50 border-emerald-100",
     title: "Star Ratings & Tally",
     description:
-      "Submit your 1 to 5 star rating. Cryptographic Firebase rules guarantee one tamper-proof vote per student to crown the authentic People's Choice Champion.",
+      "Submit your 1 to 5 star rating and likes. Cryptographic Firebase rules guarantee one tamper-proof rating per student to crown the authentic People's Choice Champion.",
   },
 ];
 
@@ -209,8 +209,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="mt-1 sm:mt-2 text-base sm:text-lg md:text-xl font-medium text-white/95 leading-relaxed max-w-2xl mx-auto drop-shadow-xs">
-            The Official People&apos;s Choice Performance Rating App.
-            Every student gets one verified live vote to crown the champion act.
+            The Official People&apos;s Choice Performance Rating &amp; Liking App.
+            Every student gets one verified live rating to crown the champion act.
           </p>
         </div>
 
@@ -222,11 +222,11 @@ export default function LandingPage() {
           </span>
           <span className="glass-pill rounded-full px-3.5 py-1.5 flex items-center gap-1.5 shadow-xs">
             <Zap className="h-4 w-4 text-amber-300 shrink-0" />
-            <span>Instant Live Star Rating</span>
+            <span>Instant Live Star Rating &amp; Likes</span>
           </span>
           <span className="glass-pill rounded-full px-3.5 py-1.5 flex items-center gap-1.5 shadow-xs">
             <Lock className="h-4 w-4 text-purple-200 shrink-0" />
-            <span>Single Cryptographic Vote</span>
+            <span>Single Cryptographic Rating</span>
           </span>
         </div>
 
@@ -271,7 +271,7 @@ export default function LandingPage() {
               id="how-heading"
               className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900"
             >
-              How People&apos;s Choice Voting Works
+              How People&apos;s Choice Rating &amp; Liking Works
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
               Zero paper ballots. 100% verified student star ratings tallied in real time.
@@ -343,7 +343,7 @@ export default function LandingPage() {
               Need to coordinate live acts or configure event settings?
             </h3>
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-              Authorized stage managers and fest administrators have dedicated consoles for timing countdowns, categories, and student voter directories.
+              Authorized stage managers and fest administrators have dedicated consoles for timing countdowns, categories, and student ratings directories.
             </p>
           </div>
 

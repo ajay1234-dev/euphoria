@@ -1,29 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import {
-  Users,
-  CheckCircle2,
-  Clock,
-  Music,
-  Building2,
-  AlertCircle,
-  RefreshCw,
-  ArrowRight,
-  Sparkles,
-  Timer,
-  Play,
-  Square,
-  PlusCircle,
-  RotateCcw,
-  ExternalLink,
-  Tv,
-  BarChart3,
-  Star,
-  Check,
-} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -274,15 +254,37 @@ export default function AdminOverviewPage() {
       if (!idToken) throw new Error("Not authenticated");
       const tally = await stopPerformanceVoting(eventId, activeId, idToken);
       toast.success(
-        `Voting closed! Finalized with ${tally.totalVotes} votes (Avg: ${tally.averageRating.toFixed(2)} ★ · ${tally.percentageScore.toFixed(1)}%)`
+        `Rating closed! Finalized with ${tally.totalVotes} ratings (Avg: ${tally.averageRating.toFixed(2)} ★ · ${tally.percentageScore.toFixed(1)}%)`
       );
     } catch (err: unknown) {
-      toast.error((err as Error).message ?? "Failed to close voting");
+      toast.error((err as Error).message ?? "Failed to close rating");
       console.error(err);
     } finally {
       setStageActing(false);
     }
   };
+
+  // Auto-stop voting automatically when timer expires
+  const autoStoppedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isOpen || !eventId || !activeId || remaining > 0 || !endsAtMs) return;
+    if (autoStoppedRef.current === activeId) return;
+    autoStoppedRef.current = activeId;
+
+    const autoStop = async () => {
+      try {
+        const idToken = await auth.currentUser?.getIdToken(true);
+        if (!idToken) return;
+        const tally = await stopPerformanceVoting(eventId, activeId, idToken);
+        toast.info(
+          `Review timer finished! Voting automatically closed & finalized (${tally.totalVotes} votes · Score: ${tally.percentageScore.toFixed(1)}%)`
+        );
+      } catch (err) {
+        console.error("[admin/overview] Auto-stop error:", err);
+      }
+    };
+    autoStop();
+  }, [isOpen, eventId, activeId, remaining, endsAtMs]);
 
   const handleExtendVoting = async () => {
     if (!eventId) return;
@@ -291,7 +293,7 @@ export default function AdminOverviewPage() {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated");
       await extendPerformanceVoting(eventId, 30, idToken);
-      toast.success("Extended voting by +30 seconds!");
+      toast.success("Extended rating timer by +30 seconds!");
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Failed to extend timer");
       console.error(err);
@@ -307,7 +309,7 @@ export default function AdminOverviewPage() {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated");
       await resetStageState(eventId, idToken);
-      toast.info("Stage reset to idle state. All votes are preserved.");
+      toast.info("Stage reset to idle state. All ratings are preserved.");
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Failed to reset stage");
       console.error(err);
@@ -393,26 +395,12 @@ export default function AdminOverviewPage() {
         </div>
         <div className="flex items-center gap-2.5">
           <Link
-            href="/organizer/dashboard"
-            target="_blank"
-            className="inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition hover:bg-slate-50"
-            style={{ borderColor: "var(--border)", color: "var(--ink)" }}
-            title="Open Live Timer Projector in new tab"
+            href="/admin/projection"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-900 transition hover:bg-purple-100 shadow-xs"
+            title="Open Auditorium Projection Console"
           >
-            <Tv className="h-3.5 w-3.5 text-purple-600" />
-            <span>Timer Projector</span>
-            <ExternalLink className="h-3 w-3 text-slate-400" />
-          </Link>
-          <Link
-            href="/organizer/results"
-            target="_blank"
-            className="inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition hover:bg-slate-50"
-            style={{ borderColor: "var(--border)", color: "var(--ink)" }}
-            title="Open Results Bar Chart Projector in new tab"
-          >
-            <BarChart3 className="h-3.5 w-3.5 text-amber-600" />
-            <span>Chart Projector</span>
-            <ExternalLink className="h-3 w-3 text-slate-400" />
+            <i className="bi bi-projector text-purple-600 text-sm" />
+            <span>Projection Console</span>
           </Link>
           <Button
             variant="outline"
@@ -421,7 +409,7 @@ export default function AdminOverviewPage() {
             disabled={loadingStats}
             className="flex items-center gap-1.5"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loadingStats ? "animate-spin" : ""}`} />
+            <i className={`bi bi-arrow-clockwise text-sm ${loadingStats ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
@@ -444,7 +432,7 @@ export default function AdminOverviewPage() {
                 color: "#ffffff",
               }}
             >
-              <Users className="h-6 w-6" />
+              <i className="bi bi-people-fill text-2xl" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -496,11 +484,11 @@ export default function AdminOverviewPage() {
                   color: isOpen ? "#7C3AED" : "#D97706",
                 }}
               >
-                <Timer className="h-5 w-5" />
+                <i className="bi bi-stopwatch text-lg" />
               </div>
               <div>
                 <CardTitle className="text-base font-bold" style={{ color: "var(--ink)" }}>
-                  Live Stage Voting & Timer Controller
+                  Live Stage Voting &amp; Timer Controller
                 </CardTitle>
                 <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
                   Admin control center · Select act, set timer duration, and launch live auditorium voting
@@ -527,7 +515,7 @@ export default function AdminOverviewPage() {
                   className="h-7 text-xs flex items-center gap-1 text-slate-500 hover:text-slate-800"
                   title="Reset stage to idle"
                 >
-                  <RotateCcw className="h-3 w-3" />
+                  <i className="bi bi-arrow-counterclockwise text-xs" />
                   Reset
                 </Button>
               )}
@@ -547,7 +535,7 @@ export default function AdminOverviewPage() {
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Voting Active
+                      Rating Active
                     </span>
                     {activePerf?.departmentId && deptMap[activePerf.departmentId] && (
                       <span
@@ -584,12 +572,12 @@ export default function AdminOverviewPage() {
                   </span>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-purple-800 border border-purple-100 shadow-xs">
-                      <Users className="h-3 w-3 text-purple-600" />
-                      <span>{liveVotes} Votes</span>
+                      <i className="bi bi-people-fill text-purple-600 text-xs" />
+                      <span>{liveVotes} Ratings &amp; Likes</span>
                     </span>
                     {liveVotes > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-amber-700 border border-amber-100 shadow-xs">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        <i className="bi bi-star-fill text-amber-400 text-xs" />
                         <span>{liveAvg.toFixed(2)} ★</span>
                       </span>
                     )}
@@ -607,8 +595,8 @@ export default function AdminOverviewPage() {
                   className="flex-1 min-h-[46px] flex items-center justify-center gap-2 text-sm font-bold shadow-sm"
                   style={{ background: "#DC2626" }}
                 >
-                  <Square className="h-4 w-4" />
-                  {stageActing ? "Finalizing Tally…" : "Stop & Finalize Voting Tally"}
+                  <i className="bi bi-stop-fill text-base" />
+                  {stageActing ? "Finalizing Tally…" : "Stop & Finalize Rating Tally"}
                 </Button>
 
                 <Button
@@ -618,7 +606,7 @@ export default function AdminOverviewPage() {
                   disabled={stageActing}
                   className="min-h-[46px] px-4 flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-700 border-amber-300 hover:bg-amber-50"
                 >
-                  <PlusCircle className="h-4 w-4 text-amber-600" />
+                  <i className="bi bi-plus-circle-fill text-amber-600 text-sm" />
                   Extend +30s
                 </Button>
               </div>
@@ -627,8 +615,8 @@ export default function AdminOverviewPage() {
               {liveVotes > 0 && (
                 <div className="rounded-xl border p-4 space-y-2" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
                   <p className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    Live Rating Distribution ({liveVotes} votes · {liveAvg.toFixed(2)} ★ avg)
+                    <i className="bi bi-star-fill text-amber-400 text-xs" />
+                    Live Rating Distribution ({liveVotes} ratings · {liveAvg.toFixed(2)} ★ avg)
                   </p>
                   <div className="space-y-1.5">
                     {[5, 4, 3, 2, 1].map((star) => {
@@ -662,7 +650,7 @@ export default function AdminOverviewPage() {
                 {/* 1. Act Selector */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Music className="h-3.5 w-3.5 text-purple-600" />
+                    <i className="bi bi-music-note-beamed text-purple-600 text-xs" />
                     <span>Select Scheduled Act for Live Voting</span>
                   </label>
                   <select
@@ -689,7 +677,7 @@ export default function AdminOverviewPage() {
                 {/* 2. Duration Selector */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-amber-600" />
+                    <i className="bi bi-clock-fill text-amber-600 text-xs" />
                     <span>Voting Duration</span>
                   </label>
                   <div className="flex flex-wrap items-center gap-2">
@@ -736,7 +724,7 @@ export default function AdminOverviewPage() {
                 className="w-full min-h-[48px] flex items-center justify-center gap-2 text-sm sm:text-base font-bold text-white shadow-md transition hover:opacity-95"
                 style={{ background: "#16A34A" }}
               >
-                <Play className="h-4 w-4" />
+                <i className="bi bi-play-fill text-base" />
                 {stageActing
                   ? "Starting Stage Timer…"
                   : `Start Live Voting Timer (${customDurationInput ? customDurationInput + "s" : selectedDuration + "s"})`}
@@ -753,7 +741,7 @@ export default function AdminOverviewPage() {
             <CardTitle className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>
               Total Registered
             </CardTitle>
-            <Users className="h-4 w-4" style={{ color: "var(--primary)" }} />
+            <i className="bi bi-people-fill text-base" style={{ color: "var(--primary)" }} />
           </CardHeader>
           <CardContent>
             {loadingStats ? (
@@ -774,7 +762,7 @@ export default function AdminOverviewPage() {
             <CardTitle className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>
               Verified Students
             </CardTitle>
-            <CheckCircle2 className="h-4 w-4" style={{ color: "var(--success)" }} />
+            <i className="bi bi-check-circle-fill text-base" style={{ color: "var(--success)" }} />
           </CardHeader>
           <CardContent>
             {loadingStats ? (
@@ -785,7 +773,7 @@ export default function AdminOverviewPage() {
               </div>
             )}
             <p className="text-xs mt-1" style={{ color: "var(--ink-muted)" }}>
-              Eligible to vote on event day
+              Eligible to rate on event day
             </p>
           </CardContent>
         </Card>
@@ -795,7 +783,7 @@ export default function AdminOverviewPage() {
             <CardTitle className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>
               Unverified
             </CardTitle>
-            <Clock className="h-4 w-4" style={{ color: "var(--warning)" }} />
+            <i className="bi bi-clock-fill text-base" style={{ color: "var(--warning)" }} />
           </CardHeader>
           <CardContent>
             {loadingStats ? (
@@ -816,7 +804,7 @@ export default function AdminOverviewPage() {
             <CardTitle className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>
               Lineup Acts
             </CardTitle>
-            <Music className="h-4 w-4" style={{ color: "var(--secondary)" }} />
+            <i className="bi bi-music-note-beamed text-base" style={{ color: "var(--secondary)" }} />
           </CardHeader>
           <CardContent>
             {loadingStats ? (
@@ -839,7 +827,7 @@ export default function AdminOverviewPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Sparkles className="h-5 w-5" style={{ color: "var(--primary)" }} />
+              <i className="bi bi-stars text-lg" style={{ color: "var(--primary)" }} />
               Event Readiness Checklist
             </CardTitle>
           </CardHeader>
@@ -855,13 +843,13 @@ export default function AdminOverviewPage() {
               >
                 <div className="flex items-start gap-3">
                   {item.passed ? (
-                    <CheckCircle2
-                      className="h-5 w-5 mt-0.5 shrink-0"
+                    <i
+                      className="bi bi-check-circle-fill text-lg mt-0.5 shrink-0"
                       style={{ color: "var(--success)" }}
                     />
                   ) : (
-                    <AlertCircle
-                      className="h-5 w-5 mt-0.5 shrink-0"
+                    <i
+                      className="bi bi-exclamation-triangle-fill text-lg mt-0.5 shrink-0"
                       style={{ color: "var(--warning)" }}
                     />
                   )}
@@ -876,7 +864,7 @@ export default function AdminOverviewPage() {
                 </div>
                 <Link href={item.href}>
                   <Button variant="ghost" size="sm" className="h-8 text-xs flex items-center gap-1">
-                    Manage <ArrowRight className="h-3 w-3" />
+                    Manage <i className="bi bi-arrow-right text-xs" />
                   </Button>
                 </Link>
               </div>
@@ -888,7 +876,7 @@ export default function AdminOverviewPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Building2 className="h-5 w-5" style={{ color: "var(--primary)" }} />
+              <i className="bi bi-building text-lg" style={{ color: "var(--primary)" }} />
               Registrations by Department
             </CardTitle>
           </CardHeader>
@@ -937,21 +925,21 @@ export default function AdminOverviewPage() {
         </Card>
       </div>
 
-      {/* ── STOP VOTING CONFIRMATION DIALOG ── */}
+      {/* ── STOP RATING CONFIRMATION DIALOG ── */}
       <AlertDialog open={showStopDialog} onOpenChange={setShowStopDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-700">
-              <Square className="h-5 w-5" />
-              Stop &amp; Finalize Voting?
+              <i className="bi bi-stop-fill text-xl" />
+              Stop &amp; Finalize Rating?
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                This will <strong>permanently lock</strong> the vote tally for{" "}
-                <strong>{activePerf?.name ?? "this act"}</strong> and close the voting window for all students.
+                This will <strong>permanently lock</strong> the rating tally for{" "}
+                <strong>{activePerf?.name ?? "this act"}</strong> and close the rating window for all students.
               </span>
               <span className="block text-amber-700 font-medium">
-                This action cannot be undone. Votes will be finalized and scores calculated.
+                This action cannot be undone. Ratings will be finalized and scores calculated.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -973,7 +961,7 @@ export default function AdminOverviewPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <RotateCcw className="h-5 w-5 text-slate-600" />
+              <i className="bi bi-arrow-counterclockwise text-xl text-slate-600" />
               Reset Stage to Idle?
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
@@ -981,7 +969,7 @@ export default function AdminOverviewPage() {
                 This will reset the stage state back to <strong>idle</strong>. The active performance reference will be cleared.
               </span>
               <span className="block text-emerald-700 font-medium">
-                ✓ All vote documents are preserved. No data is deleted.
+                ✓ All rating documents are preserved. No data is deleted.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>

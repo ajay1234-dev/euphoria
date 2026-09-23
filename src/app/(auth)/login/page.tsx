@@ -206,7 +206,7 @@ export default function LoginPage() {
                   You haven&apos;t registered for the cultural fest yet.
                 </h3>
                 <p className="mt-1 text-xs text-amber-800 leading-relaxed">
-                  We couldn&apos;t find a festival profile for this college Google account. Complete your student registration to vote.
+                  We couldn&apos;t find a festival profile for this college Google account. Complete your student registration to rate &amp; like performances.
                 </p>
               </div>
 

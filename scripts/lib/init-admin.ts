@@ -9,6 +9,8 @@ import { resolve } from "path";
 dotenv.config({ path: resolve(process.cwd(), ".env.local") });
 dotenv.config({ path: resolve(process.cwd(), ".env") });
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 let _app: admin.app.App | null = null;
 
 export function getScriptAdminApp(): admin.app.App {

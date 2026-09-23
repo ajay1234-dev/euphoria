@@ -14,15 +14,47 @@ export async function getAppConfig(): Promise<AppConfig | null> {
   return snap.exists() ? snap.data() : null;
 }
 
+/**
+ * Call the server-authoritative admin config API route with fresh token.
+ */
+async function callAdminConfigApi(body: Record<string, unknown>): Promise<boolean> {
+  try {
+    if (!auth.currentUser) return false;
+    const token = await auth.currentUser.getIdToken(/* forceRefresh */ true);
+    const res = await fetch("/api/admin/config", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    return json.ok === true;
+  } catch (err) {
+    console.warn("[AdminSettings] API call failed, falling back to client write:", err);
+    return false;
+  }
+}
+
+/**
+ * Updates full application configuration. Uses server API route primarily
+ * to avoid client permission errors, falling back to client setDoc.
+ */
 export async function updateAppConfig(input: AppConfigInput): Promise<void> {
+  const data = appConfigSchema.parse(input);
+
+  // 1. Try server API first
+  const apiSuccess = await callAdminConfigApi(data);
+  if (apiSuccess) return;
+
+  // 2. Client fallback
   if (auth.currentUser) {
     await auth.currentUser.getIdToken(/* forceRefresh */ true);
   }
-  const data = appConfigSchema.parse(input);
   const existing = await getDoc(configAppRef());
 
   if (!existing.exists()) {
-    // Bootstrap case
     await setDoc(configAppRef(), {
       ...data,
       updatedAt: serverTimestamp(),
@@ -37,11 +69,46 @@ export async function updateAppConfig(input: AppConfigInput): Promise<void> {
 }
 
 /**
+ * Dedicated, authoritative toggle for Event Day System Gate (eventOpen: true | false).
+ * Calls server API to bypass any client permission restrictions.
+ */
+export async function updateEventGate(open: boolean): Promise<void> {
+  // 1. Try server API first
+  const apiSuccess = await callAdminConfigApi({ eventOpen: open });
+  if (apiSuccess) return;
+
+  // 2. Client fallback with safe defaults matching validConfig rule
+  if (auth.currentUser) {
+    await auth.currentUser.getIdToken(/* forceRefresh */ true);
+  }
+
+  const existing = await getDoc(configAppRef());
+  const currentData: Partial<AppConfig> = existing.exists() ? existing.data() : {};
+
+  await setDoc(configAppRef(), {
+    festName: currentData.festName || "Euphoria 2026",
+    activeEventId: currentData.activeEventId || "default-event",
+    allowedEmailDomains: currentData.allowedEmailDomains || ["msec.edu.in", "student.msec.edu.in"],
+    blockPlusAddressing: currentData.blockPlusAddressing ?? false,
+    requireStudentId: currentData.requireStudentId ?? true,
+    studentIdPattern: currentData.studentIdPattern || "^[A-Z0-9-]{3,30}$",
+    registrationOpen: currentData.registrationOpen ?? true,
+    eventOpen: open,
+    sections: currentData.sections || ["A", "B"],
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
  * Targeted toggle for registration open/closed.
- * Force-refreshes token so Firestore rules receive an ID token with the admin claim,
- * and uses setDoc with existing/fallback data so validConfig rule always passes.
+ * Calls server API first, then falls back to client setDoc.
  */
 export async function updateRegistrationStatus(open: boolean): Promise<void> {
+  // 1. Try server API first
+  const apiSuccess = await callAdminConfigApi({ registrationOpen: open });
+  if (apiSuccess) return;
+
+  // 2. Client fallback
   if (auth.currentUser) {
     await auth.currentUser.getIdToken(/* forceRefresh */ true);
   }
@@ -57,6 +124,7 @@ export async function updateRegistrationStatus(open: boolean): Promise<void> {
     requireStudentId: currentData.requireStudentId ?? true,
     studentIdPattern: currentData.studentIdPattern || "^[A-Z0-9-]{3,30}$",
     registrationOpen: open,
+    ...(currentData.eventOpen !== undefined ? { eventOpen: currentData.eventOpen } : {}),
     sections: currentData.sections || ["A", "B"],
     updatedAt: serverTimestamp(),
   });

@@ -21,6 +21,8 @@ export type PerformanceInput = {
   name: string;
   description: string | null;
   order: number;
+  imageUrl?: string | null;
+  participants?: string | null;
 };
 
 export async function getPerformances(
@@ -38,6 +40,8 @@ export async function createPerformance(
 ): Promise<string> {
   const data = performanceSchema.parse({
     ...input,
+    imageUrl: input.imageUrl || null,
+    participants: input.participants || null,
     status: "scheduled",
     votingStartedAt: null,
     votingEndsAt: null,
@@ -63,11 +67,13 @@ export async function updatePerformance(
     departmentId: merged.departmentId,
     categoryId: merged.categoryId,
     name: merged.name,
-    description: merged.description,
+    description: merged.description ?? null,
     order: merged.order,
     status: merged.status,
     votingStartedAt: null,
     votingEndsAt: null,
+    imageUrl: merged.imageUrl ?? null,
+    participants: merged.participants ?? null,
   });
 
   await setDoc(performanceRef(eventId, perfId), {
@@ -92,15 +98,87 @@ export async function reorderPerformances(
   await batch.commit();
 }
 
-/** Delete only allowed for scheduled performances */
+/** Delete a performance and clean up votes */
 export async function deletePerformance(
   eventId: string,
   perfId: string
 ): Promise<void> {
   const existing = await getDoc(performanceRef(eventId, perfId));
   if (!existing.exists()) throw new Error("Performance not found");
-  if (existing.data().status !== "scheduled") {
-    throw new Error("Only scheduled performances can be deleted");
-  }
+
+  try {
+    const votesCollectionRef = collection(
+      db,
+      "events",
+      eventId,
+      "performances",
+      perfId,
+      "votes"
+    );
+    const votesSnap = await getDocs(votesCollectionRef);
+    if (!votesSnap.empty) {
+      const batch = writeBatch(db);
+      votesSnap.docs.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+    }
+  } catch {}
+
   await deleteDoc(performanceRef(eventId, perfId));
 }
+
+/** Reset all ratings and votes for a performance back to 0 and scheduled */
+export async function resetPerformanceRating(
+  eventId: string,
+  perfId: string
+): Promise<void> {
+  const perfDocRef = performanceRef(eventId, perfId);
+  const snap = await getDoc(perfDocRef);
+  if (!snap.exists()) throw new Error("Performance not found");
+
+  // 1. Reset all performance rating fields to 0
+  await setDoc(
+    perfDocRef,
+    {
+      status: "scheduled",
+      votingStartedAt: null,
+      votingEndsAt: null,
+      finalizedAt: null,
+      totalVotes: 0,
+      totalRatingPoints: 0,
+      averageRating: 0,
+      percentageScore: 0,
+      rating1Count: 0,
+      rating2Count: 0,
+      rating3Count: 0,
+      rating4Count: 0,
+      rating5Count: 0,
+      updatedAt: serverTimestamp(),
+    } as any,
+    { merge: true }
+  );
+
+  // 2. Delete all individual student votes in subcollection
+  try {
+    const votesCollectionRef = collection(
+      db,
+      "events",
+      eventId,
+      "performances",
+      perfId,
+      "votes"
+    );
+    const votesSnap = await getDocs(votesCollectionRef);
+    if (!votesSnap.empty) {
+      const batch = writeBatch(db);
+      votesSnap.docs.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+    }
+  } catch (err) {
+    console.warn("Could not delete subcollection votes:", err);
+  }
+}
+

@@ -9,6 +9,8 @@ export const appConfigSchema = z.object({
   requireStudentId: z.boolean(),
   studentIdPattern: z.string().min(1).max(200).nullable(),
   registrationOpen: z.boolean(),
+  /** When false, students see the Coming Soon lock screen */
+  eventOpen: z.boolean().optional(),
   sections: z.array(z.string().min(1)).min(1).max(20).optional(),
 });
 
@@ -66,6 +68,8 @@ export const performanceSchema = z.object({
   status: z.enum(["scheduled", "live", "completed"]),
   votingStartedAt: z.null(),
   votingEndsAt: z.null(),
+  imageUrl: z.string().max(1000000).nullable().optional(),
+  participants: z.string().max(200).nullable().optional(),
 });
 
 export type PerformanceInput = z.infer<typeof performanceSchema>;

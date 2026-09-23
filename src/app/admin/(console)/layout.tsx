@@ -7,26 +7,16 @@ import { AdminGuard } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppConfig, useActiveEvent } from "@/hooks/useData";
 import { TestModeBanner } from "@/components/common/TestModeBanner";
-import {
-  LayoutDashboard,
-  Building2,
-  Tag,
-  Music,
-  Users,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/departments", label: "Departments", icon: Building2 },
-  { href: "/admin/categories", label: "Categories", icon: Tag },
-  { href: "/admin/performances", label: "Performances", icon: Music },
-  { href: "/admin/students", label: "Students", icon: Users },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin", label: "Overview", iconClass: "bi bi-speedometer2", exact: true },
+  { href: "/admin/departments", label: "Departments", iconClass: "bi bi-diagram-3" },
+  { href: "/admin/categories", label: "Categories", iconClass: "bi bi-grid" },
+  { href: "/admin/performances", label: "Performances", iconClass: "bi bi-music-note-beamed" },
+  { href: "/admin/projection", label: "Projection", iconClass: "bi bi-projector" },
+  { href: "/admin/students", label: "Students", iconClass: "bi bi-people" },
+  { href: "/admin/settings", label: "Settings", iconClass: "bi bi-gear" },
 ];
 
 function NavItems({
@@ -59,8 +49,8 @@ function NavItems({
                 }
                 aria-current={active ? "page" : undefined}
               >
-                <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {item.label}
+                <i className={`${item.iconClass} text-base shrink-0`} aria-hidden="true" />
+                <span>{item.label}</span>
               </Link>
             </li>
           );
@@ -109,8 +99,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-2 text-sm rounded-[12px] px-3 py-2.5 w-full hover:opacity-80 transition-opacity"
             style={{ color: "var(--ink-muted)" }}
           >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-            Sign out
+            <i className="bi bi-box-arrow-right text-base" aria-hidden="true" />
+            <span>Sign out</span>
           </button>
         </div>
       </aside>
@@ -147,7 +137,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             aria-label="Close navigation"
             style={{ color: "var(--ink-muted)" }}
           >
-            <X className="h-5 w-5" />
+            <i className="bi bi-x-lg text-lg" />
           </button>
         </div>
         {isTestEvent && <TestModeBanner compact className="mb-4" />}
@@ -158,8 +148,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-2 text-sm rounded-[12px] px-3 py-2.5 w-full"
             style={{ color: "var(--ink-muted)" }}
           >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-            Sign out
+            <i className="bi bi-box-arrow-right text-base" aria-hidden="true" />
+            <span>Sign out</span>
           </button>
         </div>
       </div>
@@ -177,7 +167,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             aria-label="Open navigation"
             style={{ color: "var(--ink-muted)" }}
           >
-            <Menu className="h-5 w-5" />
+            <i className="bi bi-list text-2xl" />
           </button>
 
           <div className="flex items-center gap-2 ml-auto">

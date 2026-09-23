@@ -7,11 +7,13 @@ import {
   getDoc,
   addDoc,
   setDoc,
+  deleteDoc,
   query,
   orderBy,
   serverTimestamp,
   collection,
 } from "firebase/firestore";
+
 import { db } from "@/lib/firebase/client";
 import { departmentsRef, departmentRef } from "@/lib/firebase/paths";
 import { departmentSchema, type DepartmentInput } from "@/lib/validation/schemas";
@@ -49,7 +51,7 @@ export async function updateDepartment(
   });
 }
 
-/** "Archive" = set isActive: false. No hard deletes per spec. */
+/** "Archive" = set isActive: false. */
 export async function archiveDepartment(id: string): Promise<void> {
   const existing = await getDoc(departmentRef(id));
   if (!existing.exists()) throw new Error("Department not found");
@@ -60,3 +62,11 @@ export async function archiveDepartment(id: string): Promise<void> {
     updatedAt: serverTimestamp(),
   });
 }
+
+/** Permanently delete department */
+export async function deleteDepartment(id: string): Promise<void> {
+  const existing = await getDoc(departmentRef(id));
+  if (!existing.exists()) throw new Error("Department not found");
+  await deleteDoc(departmentRef(id));
+}
+

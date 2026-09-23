@@ -15,6 +15,7 @@ import type {
   VotingState,
   AdminDirectoryEntry,
   Vote,
+  ProjectionState,
 } from "@/types/firestore";
 
 function makeConverter<T extends object>(): FirestoreDataConverter<T> {
@@ -42,3 +43,5 @@ export const performanceConverter = makeConverter<Performance>();
 export const votingStateConverter = makeConverter<VotingState>();
 export const adminDirectoryEntryConverter = makeConverter<AdminDirectoryEntry>();
 export const voteConverter = makeConverter<Vote>();
+export const projectionStateConverter = makeConverter<ProjectionState>();
+

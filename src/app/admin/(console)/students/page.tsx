@@ -230,7 +230,7 @@ export default function StudentsPage() {
         <Card className="border-emerald-200 bg-emerald-50/30 shadow-sm">
           <CardHeader className="pb-1.5">
             <CardTitle className="text-xs font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Active / Eligible Voters
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Active / Eligible Students
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -238,7 +238,7 @@ export default function StudentsPage() {
               {loadingStats ? "…" : stats.registered}
             </div>
             <p className="text-xs text-emerald-600/80 mt-1">
-              Verified identity eligible for live voting
+              Verified identity eligible for live rating &amp; likes
             </p>
           </CardContent>
         </Card>

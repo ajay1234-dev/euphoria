@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Plus, Edit2, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +32,7 @@ import {
   createCategory,
   updateCategory,
   archiveCategory,
+  deleteCategory,
 } from "@/lib/admin/categories";
 import type { Category } from "@/types/firestore";
 
@@ -56,8 +56,9 @@ export default function CategoriesPage() {
   const [overallWeight, setOverallWeight] = useState(1);
   const [saving, setSaving] = useState(false);
 
-  // Archive confirmation
+  // Archive and Delete confirmation
   const [archiveTarget, setArchiveTarget] = useState<CategoryWithId | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CategoryWithId | null>(null);
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -159,6 +160,19 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteCategory(deleteTarget.id);
+      toast.success(`${deleteTarget.name} has been deleted`);
+      setDeleteTarget(null);
+      fetchCategories();
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete category");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -170,8 +184,8 @@ export default function CategoriesPage() {
             Contest categories (e.g., Western Dance, Solo Vocals, Street Play)
           </p>
         </div>
-        <Button onClick={openCreateDialog} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Add Category
+        <Button onClick={openCreateDialog} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold">
+          <i className="bi bi-plus-lg text-sm" /> Add Category
         </Button>
       </div>
 
@@ -240,22 +254,31 @@ export default function CategoriesPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => openEditDialog(cat)}
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 text-slate-500 hover:text-slate-800"
                           title="Edit"
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <i className="bi bi-pencil text-sm" />
                         </Button>
                         {cat.isActive && (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setArchiveTarget(cat)}
-                            className="h-8 w-8 p-0 hover:text-red-600"
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-amber-600"
                             title="Archive"
                           >
-                            <Archive className="h-4 w-4" />
+                            <i className="bi bi-archive text-sm" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(cat)}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
+                          title="Delete Category"
+                        >
+                          <i className="bi bi-trash3 text-sm" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -311,7 +334,7 @@ export default function CategoriesPage() {
                 <Label htmlFor="cat-desc">Description (optional)</Label>
                 <Textarea
                   id="cat-desc"
-                  placeholder="Short guidelines or context for voters"
+                  placeholder="Short guidelines or context for raters"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
@@ -392,9 +415,20 @@ export default function CategoriesPage() {
         open={!!archiveTarget}
         onOpenChange={(open) => !open && setArchiveTarget(null)}
         title="Archive Category?"
-        description={`Are you sure you want to archive "${archiveTarget?.name}"? Existing performances and votes will be preserved, but no new performances can be scheduled in it.`}
+        description={`Are you sure you want to archive "${archiveTarget?.name}"? Existing performances and ratings will be preserved, but no new performances can be scheduled in it.`}
         confirmLabel="Archive Category"
         onConfirm={handleArchive}
+      />
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Category?"
+        description={`Are you sure you want to permanently delete "${deleteTarget?.name}"? This category will be permanently removed.`}
+        confirmLabel="Delete Category"
+        destructive
+        onConfirm={handleDelete}
       />
     </div>
   );

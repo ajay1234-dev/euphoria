@@ -92,19 +92,20 @@ export function useDepartments(): UseDepartmentsResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (deptCache.data) {
-      setDepartments(deptCache.data);
-      setLoading(false);
-      return;
-    }
-    getDocs(query(departmentsRef(), orderBy("order", "asc")))
-      .then((snap) => {
+    const unsub = onSnapshot(
+      query(departmentsRef(), orderBy("order", "asc")),
+      (snap) => {
         const data = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
         deptCache.data = data;
         setDepartments(data);
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+        setLoading(false);
+      },
+      (err: Error) => {
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
   }, []);
 
   return { departments, loading, error };

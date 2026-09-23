@@ -14,18 +14,8 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { FestBackground } from "@/components/common/FestBackground";
 import { formatDate } from "@/lib/utils";
 import { formatYearLabel } from "@/config/departments";
-import {
-  LogOut,
-  User,
-  CheckCircle,
-  Clock,
-  Music,
-  Star,
-  Zap,
-  CheckCircle2,
-  AlertCircle,
-  Sparkles,
-} from "lucide-react";
+import { getPerformanceImage } from "@/config/constants";
+
 import PeekRating from "@/components/ui/PeekRating";
 
 
@@ -52,11 +42,11 @@ function useCountdown(endsAtMs: number | null, serverOffsetMs: number = 0): numb
 }
 
 const RATING_DESCRIPTIONS: Record<number, string> = {
-  1: "★☆☆☆☆ · Needs Improvement",
-  2: "★★☆☆☆ · Fair Effort",
-  3: "★★★☆☆ · Good Performance",
-  4: "★★★★☆ · Great Act!",
-  5: "★★★★★ · Outstanding Champion Performance!",
+  1: "20% · Needs Improvement",
+  2: "40% · Good Effort",
+  3: "60% · Good Performance",
+  4: "80% · Excellent Performance",
+  5: "100% · Outstanding Champion Performance!",
 };
 
 function VoteDashboard() {
@@ -67,8 +57,8 @@ function VoteDashboard() {
   const { performances, loading: perfsLoading } = usePerformances(config?.activeEventId);
   const { votingState, serverOffsetMs, loading: vsLoading } = useVotingState(config?.activeEventId);
 
-  // Live voting state
-  const [selectedRating, setSelectedRating] = useState<number>(5);
+  // Live voting state — starts at 0 (empty hearts until student taps)
+  const [selectedRating, setSelectedRating] = useState<number>(0);
   const [hoveredRating, setHoveredRating] = useState<number | null>(null);
   const [existingVote, setExistingVote] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -86,12 +76,30 @@ function VoteDashboard() {
   const activePerfDept = activePerf?.departmentId ? deptMap[activePerf.departmentId] : null;
   const activePerfCat = activePerf?.categoryId ? catMap[activePerf.categoryId] : null;
 
+  // ── Event Day Gate: when eventOpen is false, show Coming Soon screen ──────
+  const isSystemOpen = config?.eventOpen === true;
+
+  // ── Department voting block: student cannot vote for their own dept's act ──
+  // Checks departmentId, departmentCode (e.g. IT, 103), and full department name
+  const isStudentDeptBlocked =
+    isOpen &&
+    activePerf?.departmentId != null &&
+    Boolean(
+      (profile?.departmentId && activePerf.departmentId === profile.departmentId) ||
+      (profile?.departmentCode && activePerfDept?.shortName &&
+        profile.departmentCode.toLowerCase() === activePerfDept.shortName.toLowerCase()) ||
+      (profile?.departmentCode && (activePerfDept as unknown as { code?: string })?.code &&
+        profile.departmentCode.toLowerCase() === (activePerfDept as unknown as { code?: string }).code?.toLowerCase()) ||
+      (profile?.department && activePerfDept?.name &&
+        profile.department.toLowerCase() === activePerfDept.name.toLowerCase())
+    );
+
   const endsAtMs = votingState?.votingEndsAt ? votingState.votingEndsAt.toMillis() : null;
   const remaining = useCountdown(isOpen ? endsAtMs : null, serverOffsetMs);
 
   // Reset vote state when active performance changes (new act starts)
   useEffect(() => {
-    setSelectedRating(5);
+    setSelectedRating(0);
     setHoveredRating(null);
     setExistingVote(null);
     setJustVoted(false);
@@ -136,9 +144,13 @@ function VoteDashboard() {
   // Handle vote submission — minimal vote doc per Phase 2 spec (no personal data)
   const handleVote = async () => {
     if (!config?.activeEventId || !activePerfId || !profile?.uid) return;
+    if (!selectedRating || selectedRating < 1 || selectedRating > 5) {
+      setVoteError("Please tap 1 to 5 hearts to select your rating before submitting.");
+      return;
+    }
     // Guard: timer has expired — don't submit
     if (remaining === 0 && isOpen) {
-      setVoteError("Voting time has expired. Wait for the admin to finalize.");
+      setVoteError("Rating time has expired. Wait for the admin to finalize.");
       return;
     }
     setSubmitting(true);
@@ -155,7 +167,7 @@ function VoteDashboard() {
         profile.uid
       );
 
-      // Phase 2: Minimal vote doc — only studentUid, rating, createdAt
+      // Minimal rating doc: studentUid, rating, createdAt
       await setDoc(voteDocRef, {
         studentUid: profile.uid,
         rating: selectedRating,
@@ -164,7 +176,7 @@ function VoteDashboard() {
 
       setJustVoted(true);
     } catch (e: unknown) {
-      setVoteError((e as Error).message ?? "Failed to cast vote. Please try again.");
+      setVoteError((e as Error).message ?? "Failed to submit rating. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -184,6 +196,11 @@ function VoteDashboard() {
 
   const effectiveRating = hoveredRating ?? selectedRating;
 
+  // Upcoming / next scheduled performance for standby display
+  const upcomingPerf = performances.find((p) => p.status === "scheduled") || performances[0] || null;
+  const upcomingDept = upcomingPerf?.departmentId ? deptMap[upcomingPerf.departmentId] : null;
+  const upcomingCat = upcomingPerf?.categoryId ? catMap[upcomingPerf.categoryId] : null;
+
   return (
     <div
       className="min-h-dvh"
@@ -193,51 +210,145 @@ function VoteDashboard() {
 
       {/* Header */}
       <header
-        className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+        className="sticky top-0 z-10 flex items-center justify-between px-3 sm:px-4 py-3"
         style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
       >
-        <span
-          className="text-lg font-bold"
-          style={{ fontFamily: "var(--font-bricolage)", color: "var(--primary)" }}
-        >
-          {config?.festName ?? "Euphoria"}
-        </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/student/dashboard"
-            className="flex items-center gap-1.5 rounded-[10px] border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
-            title="My Student Dashboard"
+            className="tap-scale flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-50 shadow-xs transition"
+            title="Back to Student Dashboard"
           >
-            <User className="h-3.5 w-3.5 text-purple-600" />
-            <span className="hidden xs:inline">Dashboard</span>
+            <i className="bi bi-arrow-left text-purple-700 text-xs" />
+            <span className="font-bold">Dashboard</span>
           </Link>
-
-          {/* Avatar */}
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white shadow-xs"
-            style={{ background: "var(--gradient-hero)" }}
-            aria-hidden="true"
+          <span
+            className="text-base sm:text-lg font-bold"
+            style={{ fontFamily: "var(--font-bricolage)", color: "var(--primary)" }}
           >
-            {profile?.fullName?.charAt(0).toUpperCase() ?? "?"}
-          </div>
+            {config?.festName ?? "Euphoria"}
+          </span>
+          <span className="hidden xs:inline text-xs font-semibold text-slate-400">·</span>
+          <span className="hidden xs:inline text-xs font-bold text-slate-600">Live Rating &amp; Likes</span>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {dept && (
+            <DepartmentChip name={dept.name} shortName={dept.shortName} color={dept.color} />
+          )}
           <button
             onClick={signOutUser}
-            className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs font-medium transition-colors"
-            style={{ color: "var(--ink-muted)", minHeight: "40px" }}
+            className="flex items-center gap-1.5 rounded-[10px] border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
             aria-label="Sign out"
           >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
+            <i className="bi bi-box-arrow-right text-xs" aria-hidden="true" />
             <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </header>
 
+      {/* ── EVENT DAY GATE — full screen Coming Soon when system is closed ── */}
+      {!isSystemOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center text-center px-6"
+          style={{ background: "var(--bg)" }}
+        >
+          <FestBackground />
+          <div className="relative z-10 flex flex-col items-center gap-6 max-w-sm">
+            {/* Lock icon */}
+            <div
+              className="flex h-24 w-24 items-center justify-center rounded-full shadow-xl"
+              style={{ background: "var(--gradient-hero)" }}
+            >
+              <i className="bi bi-lock-fill text-white text-5xl" />
+            </div>
+            {/* Title */}
+            <div className="space-y-2">
+              <h1
+                className="text-4xl font-black tracking-tight"
+                style={{ fontFamily: "var(--font-bricolage)", color: "var(--ink)" }}
+              >
+                {config?.festName ?? "Euphoria 2026"}
+              </h1>
+              <p className="text-xl font-bold" style={{ color: "var(--ink)" }}>
+                Rating &amp; Likes Open on Event Day
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                The live rating and likes system will be unlocked by the admin on the day of the festival.
+                Please check back then — this page will automatically update!
+              </p>
+            </div>
+            {/* Action buttons on lock screen */}
+            <div className="flex flex-col items-center gap-3">
+              <Link
+                href="/student/dashboard"
+                className="tap-scale inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-5 py-2.5 text-xs font-bold text-slate-800 shadow-sm hover:bg-slate-50 transition"
+              >
+                <i className="bi bi-arrow-left text-purple-600 text-sm" />
+                <span>Return to Student Dashboard</span>
+              </Link>
+              {/* Pulsing dot */}
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 shadow-xs">
+                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-xs font-semibold text-slate-600">System Offline — Standing By</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main id="main-content" className="mx-auto max-w-2xl px-4 py-6 space-y-5" tabIndex={-1}>
         {/* Test mode banner */}
         {isTestEvent && <TestModeBanner />}
 
-        {/* ── LIVE VOTING ARENA CARD ────────────────────────────────────────── */}
+        {/* ── LIVE RATING ARENA CARD ────────────────────────────────────────── */}
         {isOpen && activePerf ? (
+          /* When set timing is over (remaining === 0), live rating goes off ──────────── */
+          remaining === 0 ? (
+            <div
+              className="rounded-[24px] border-2 border-slate-300 p-6 sm:p-8 text-center space-y-4 shadow-lg"
+              style={{ background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)" }}
+            >
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 shadow-sm">
+                <span className="text-3xl">⏱️</span>
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-extrabold text-slate-800">Rating Window Closed</h2>
+                <p className="text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+                  {existingVote !== null || justVoted
+                    ? `Your ${existingVote ?? selectedRating}★ rating has been secured! Time is up for ${activePerf.name}. Admin is finalizing scores.`
+                    : `Time is up for ${activePerf.name}. The live rating window has closed and results are being tallied.`}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500 font-medium">
+                <span className="h-2 w-2 rounded-full bg-slate-400 animate-pulse" />
+                <span>Waiting for admin to finalize & start next act…</span>
+              </div>
+            </div>
+          ) :
+          isStudentDeptBlocked ? (
+            /* ── DEPARTMENT RATING BLOCK BANNER ─────────────────────────── */
+            <div
+              className="rounded-[24px] border-2 border-amber-300 p-6 sm:p-8 text-center space-y-4 shadow-lg"
+              style={{ background: "linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)" }}
+            >
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-4xl shadow-sm">
+                🚫
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-extrabold text-amber-900">
+                  {activePerfDept?.name ?? "Your Department"} is Blocked from Rating
+                </h2>
+                <p className="text-sm font-medium text-amber-800 max-w-xs mx-auto leading-relaxed">
+                  Students from the <strong>{activePerfDept?.name ?? "performing"} Department</strong> cannot rate their own act.
+                  Rating &amp; liking is open for all other departments!
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-xs text-amber-700 font-medium">
+                <i className="bi bi-clock-fill text-xs" />
+                <span>Waiting for the next performance…</span>
+              </div>
+            </div>
+          ) : (
           <div
             className="relative overflow-hidden rounded-[24px] border-2 border-purple-400 p-6 sm:p-8 space-y-6 shadow-xl"
             style={{
@@ -253,29 +364,51 @@ function VoteDashboard() {
 
               {/* Countdown Timer */}
               <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-1.5 border border-purple-200 shadow-xs">
-                <Clock className="h-4 w-4 text-purple-600" />
+                <i className="bi bi-stopwatch text-purple-600 text-sm" />
                 <span className="font-mono text-base sm:text-lg font-black tabular-nums text-purple-900">
                   {mins}:{secs}
                 </span>
               </div>
             </div>
 
-            {/* Performance Headline */}
-            <div className="space-y-1.5 text-center sm:text-left">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+            {/* Performance Headline with Image Cover */}
+            <div className="space-y-4 text-center sm:text-left">
+              <div className="relative aspect-16/9 sm:aspect-21/9 max-h-64 w-full overflow-hidden rounded-2xl border border-purple-200 shadow-md">
+                <img
+                  src={getPerformanceImage(activePerf, activePerfCat)}
+                  alt={activePerf.name}
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/20" />
+
+                {/* Department badge overlay on top left */}
                 {activePerfDept && (
-                  <DepartmentChip
-                    name={activePerfDept.name}
-                    shortName={activePerfDept.shortName}
-                    color={activePerfDept.color}
-                  />
+                  <div className="absolute top-3 left-3">
+                    <span
+                      className="inline-flex items-center rounded-full px-3 py-1 text-xs font-black text-white shadow-md backdrop-blur-xs"
+                      style={{ backgroundColor: activePerfDept.color }}
+                    >
+                      {activePerfDept.name} ({activePerfDept.shortName})
+                    </span>
+                  </div>
                 )}
-                {activePerfCat && (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
-                    {activePerfCat.name}
-                  </span>
-                )}
+
+                {/* Bottom category and participants on image */}
+                <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2">
+                  {activePerfCat && (
+                    <span className="rounded-lg bg-white/95 backdrop-blur-xs px-2.5 py-1 text-xs font-extrabold text-slate-800 shadow-xs">
+                      {activePerfCat.name}
+                    </span>
+                  )}
+                  {activePerf.participants && (
+                    <div className="text-white flex items-center gap-1.5 text-xs font-bold bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-lg">
+                      <i className="bi bi-people-fill text-xs" />
+                      <span>{activePerf.participants}</span>
+                    </div>
+                  )}
+                </div>
               </div>
+
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                 {activePerf.name}
               </h2>
@@ -289,219 +422,300 @@ function VoteDashboard() {
             {/* Error banner */}
             {voteError && (
               <div className="flex items-center gap-2 rounded-xl p-3 text-xs sm:text-sm font-medium bg-red-50 border border-red-200 text-red-700">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+                <i className="bi bi-exclamation-triangle-fill text-red-600 text-sm shrink-0" />
                 <span>{voteError}</span>
               </div>
             )}
 
-            {/* Timer expired banner — show when time hits 0 but state still "open" */}
-            {remaining === 0 && isOpen && existingVote === null && !justVoted && (
-              <div className="flex items-center gap-2 rounded-xl p-3 text-xs sm:text-sm font-medium bg-amber-50 border border-amber-200 text-amber-800">
-                <Clock className="h-4 w-4 shrink-0" />
-                <span>Time is up! The admin is finalizing results. Your vote window has closed.</span>
-              </div>
-            )}
-
-            {/* Vote Submitted Confirmed State */}
+            {/* Rating Submitted Confirmed State */}
             {existingVote !== null || justVoted ? (
-              <div className="rounded-2xl p-6 text-center space-y-3 bg-emerald-50 border border-emerald-200 shadow-sm">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md">
-                  <CheckCircle2 className="h-8 w-8" />
+              <div className="rounded-2xl p-6 text-center space-y-3 bg-red-50 border border-red-200 shadow-sm animate-fade-in">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-md">
+                  <i className="bi bi-heart-fill text-white text-3xl" />
                 </div>
-                <h3 className="text-xl font-bold text-emerald-900">
-                  Vote Secured &amp; Counted!
+                <h3 className="text-xl font-bold text-red-950">
+                  Rating &amp; Likes Secured!
                 </h3>
-                <p className="text-sm font-medium text-emerald-800">
-                  You awarded <strong>{existingVote ?? selectedRating} Stars</strong> to this act.
+                <p className="text-sm font-medium text-red-900">
+                  You awarded <strong>{existingVote ?? selectedRating} Likes &amp; Stars ({((existingVote ?? selectedRating) * 20)}%)</strong> to this act.
                 </p>
-                <div className="flex justify-center gap-1 text-amber-500">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-6 w-6 ${
-                        star <= (existingVote ?? selectedRating)
-                          ? "fill-amber-400 text-amber-400"
-                          : "text-slate-200"
-                      }`}
+                <div className="flex justify-center gap-1.5 text-red-600 py-1">
+                  {[1, 2, 3, 4, 5].map((heart) => (
+                    <i
+                      key={heart}
+                      className={
+                        heart <= (existingVote ?? selectedRating)
+                          ? "bi bi-heart-fill text-2xl text-red-600 scale-110 drop-shadow-xs transition-all"
+                          : "bi bi-heart text-2xl text-slate-300"
+                      }
                     />
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 pt-2">
+                <p className="text-xs text-slate-500 pt-1">
                   Tamper-proof cryptographic record verified. Sit back and await the next performance!
                 </p>
+                <div className="pt-2">
+                  <Link
+                    href="/student/dashboard"
+                    className="tap-scale inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition"
+                  >
+                    <i className="bi bi-arrow-left text-purple-600 text-xs" />
+                    <span>Back to Dashboard</span>
+                  </Link>
+                </div>
+              </div>
+            ) : remaining === 0 ? (
+              /* Review Timer Expired State — Review Window Stopped */
+              <div className="rounded-3xl p-8 text-center space-y-4 bg-white border border-slate-200 shadow-md animate-fade-in">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-600 shadow-xs">
+                  <i className="bi bi-clock-history text-3xl" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                    Rating Window Closed
+                  </h3>
+                  <p className="text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+                    The review timer for this performance has ended. Ratings are now locked and being tabulated by stage organizers.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Link
+                    href="/student/dashboard"
+                    className="tap-scale inline-flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 transition"
+                  >
+                    <i className="bi bi-arrow-left text-purple-600 text-xs" />
+                    <span>Return to Student Dashboard</span>
+                  </Link>
+                </div>
               </div>
             ) : (
               /* Interactive Star Selector & Submit CTA */
-              <div className="space-y-5 rounded-2xl bg-white p-5 sm:p-6 border border-purple-100 shadow-sm text-center">
+              <div className="space-y-5 rounded-2xl bg-white p-5 sm:p-6 border border-red-100 shadow-sm text-center">
                 <p className="text-sm sm:text-base font-bold text-slate-800">
-                  Select your rating for this performance:
+                  Rate &amp; like this performance:
                 </p>
 
-                {/* React Bits PeekRating Component */}
+                {/* React Bits PeekRating Component — Heart / Likes Shape */}
                 <div className="flex flex-col items-center justify-center py-2">
                   <PeekRating
                     value={selectedRating}
-                    onChange={(val) => {
-                      if (val > 0) setSelectedRating(val);
-                    }}
-                    onPreview={(val) => setHoveredRating(val)}
+                    defaultValue={0}
                     count={5}
-                    shape="star"
-                    labels={[
-                      "Needs Improvement",
-                      "Fair Effort",
-                      "Good Performance",
-                      "Great Act!",
-                      "Superb Champion!"
-                    ]}
-                    activeColor="#F59E0B"
-                    idleColor="#CBD5E1"
-                    tipColor="#1E1B4B"
-                    tipTextColor="#F8FAFC"
+                    shape="heart"
+                    labels={["Poor (20%)", "Fair (40%)", "Good (60%)", "Great (80%)", "Superb (100%)"]}
+                    activeColor="#ef310b"
+                    idleColor="#52525b"
+                    tipColor="#27272a"
+                    tipTextColor="#f5f5f5"
                     size={36}
-                    lift={8}
-                    magnify={1.2}
+                    lift={7}
+                    magnify={1.15}
                     riseDuration={320}
                     popScale={1.3}
                     showTip
                     allowClear={false}
+                    onChange={(val) => {
+                      setSelectedRating(val);
+                      setVoteError(null);
+                    }}
+                    onPreview={(val) => setHoveredRating(val)}
                   />
                 </div>
 
-                {/* Star Description Badge */}
-                <div className="h-6">
-                  <span className="inline-block text-xs sm:text-sm font-extrabold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200/60">
-                    {RATING_DESCRIPTIONS[effectiveRating]}
-                  </span>
+                {/* Star / Likes Description Badge */}
+                <div className="h-7 flex items-center justify-center">
+                  {effectiveRating > 0 ? (
+                    <span className="inline-block text-xs sm:text-sm font-extrabold text-red-700 bg-red-50 px-3.5 py-1 rounded-full border border-red-200/60 shadow-xs">
+                      {RATING_DESCRIPTIONS[effectiveRating]}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 bg-slate-100 px-3.5 py-1 rounded-full border border-slate-200">
+                      <i className="bi bi-hand-index-thumb text-purple-600 text-xs animate-bounce" />
+                      Tap hearts above to select your rating
+                    </span>
+                  )}
                 </div>
 
-                {/* Submit Vote CTA Button */}
+                {/* Submit Rating CTA Button */}
                 <button
                   type="button"
                   onClick={handleVote}
-                  disabled={submitting || remaining === 0}
-                  className="tap-scale w-full rounded-2xl px-6 py-4 text-base sm:text-lg font-extrabold text-white shadow-lg transition-all hover:opacity-95 disabled:opacity-50"
+                  disabled={submitting || remaining === 0 || selectedRating === 0}
+                  className="tap-scale w-full rounded-2xl px-6 py-4 text-base sm:text-lg font-extrabold text-white shadow-lg transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: remaining === 0 ? "#94A3B8" : "var(--gradient-hero)",
+                    background:
+                      selectedRating === 0 || remaining === 0
+                        ? "#94A3B8"
+                        : "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)",
                     minHeight: "52px",
                   }}
                 >
                   {submitting ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                      Securing Your Vote…
+                      Securing Your Rating…
                     </span>
                   ) : remaining === 0 ? (
                     <span className="flex items-center justify-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Voting Window Closed
+                      <i className="bi bi-clock-fill text-base" />
+                      Rating Window Closed
+                    </span>
+                  ) : selectedRating === 0 ? (
+                    <span className="flex items-center justify-center gap-2 text-slate-100">
+                      <i className="bi bi-heart text-base" />
+                      Select 1 to 5 Hearts to Rate
                     </span>
                   ) : (
                     <span className="flex items-center justify-center gap-2">
-                      <Zap className="h-5 w-5 text-amber-300 fill-amber-300" />
-                      Submit {selectedRating}-Star Rating
+                      <i className="bi bi-heart-fill text-white text-base animate-pulse" />
+                      Submit {selectedRating} Likes &amp; Rating ({selectedRating * 20}%)
                     </span>
                   )}
                 </button>
               </div>
-
             )}
           </div>
+          )
         ) : (
-          /* ── VOTING CLOSED CARD ────────────────────────────────────────── */
-          <div
-            className="rounded-[20px] p-6 text-center"
-            style={{ background: "var(--surface)", boxShadow: "var(--shadow-card)" }}
-          >
-            <div
-              className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full"
-              style={{ background: "var(--primary-soft)" }}
-              aria-hidden="true"
-            >
-              <Clock className="h-8 w-8" style={{ color: "var(--primary)" }} />
+          /* ── FEATURED UPCOMING / STAGE STANDBY CARD ── */
+          upcomingPerf ? (
+            <div className="overflow-hidden rounded-3xl border border-purple-200 bg-white shadow-xl transition-all">
+              {/* Card Cover Image Banner */}
+              <div className="relative aspect-16/9 sm:aspect-21/9 max-h-72 w-full overflow-hidden bg-slate-100">
+                <img
+                  src={getPerformanceImage(upcomingPerf, upcomingCat)}
+                  alt={upcomingPerf.name}
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
+
+                {/* Top-left department badge */}
+                {upcomingDept && (
+                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4">
+                    <span
+                      className="inline-flex items-center rounded-full px-3 py-1 text-xs sm:text-sm font-black text-white shadow-md backdrop-blur-xs"
+                      style={{ backgroundColor: upcomingDept.color }}
+                    >
+                      {upcomingDept.name} ({upcomingDept.shortName})
+                    </span>
+                  </div>
+                )}
+
+                {/* Top-right Standby Pill */}
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/80 backdrop-blur-md px-3 py-1 text-xs font-bold text-amber-300 border border-amber-300/30 shadow-md">
+                    <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+                    STAGE STANDBY · UPCOMING ACT
+                  </span>
+                </div>
+
+                {/* Bottom Category and Participants on Image */}
+                <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 right-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {upcomingCat && (
+                      <span className="rounded-lg bg-white/95 backdrop-blur-xs px-2.5 py-1 text-xs font-extrabold text-slate-800 shadow-xs">
+                        {upcomingCat.name}
+                      </span>
+                    )}
+                    {upcomingPerf.participants && (
+                      <span className="rounded-lg bg-black/60 backdrop-blur-xs px-2.5 py-1 text-xs font-semibold text-white flex items-center gap-1">
+                        <i className="bi bi-people-fill text-xs" />
+                        <span>{upcomingPerf.participants}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="p-5 sm:p-6 space-y-4">
+                <div className="space-y-1">
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                    {upcomingPerf.name}
+                  </h2>
+                  {upcomingPerf.description && (
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      {upcomingPerf.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Standby announcement notice */}
+                <div className="rounded-2xl border border-purple-100 bg-purple-50/60 p-4 flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white shadow-xs">
+                    <i className="bi bi-broadcast text-lg animate-pulse" />
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <h4 className="text-sm font-bold text-purple-950">
+                      Rating &amp; Likes will open when act goes live
+                    </h4>
+                    <p className="text-xs text-purple-800 leading-relaxed">
+                      Keep this page open! When the stage organizers trigger this performance from the admin console, your live heart &amp; star rating arena will automatically appear here.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Live WebSocket Connected · Standing by</span>
+                  </div>
+                  <Link
+                    href="/student/dashboard"
+                    className="tap-scale inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+                  >
+                    <i className="bi bi-arrow-left text-xs" />
+                    <span>Return to Dashboard</span>
+                  </Link>
+                </div>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--ink)" }}>
-              Voting is currently closed
-            </h1>
-            <p className="text-sm max-w-xs mx-auto" style={{ color: "var(--ink-muted)" }}>
-              Keep this page open — live star rating starts when the organizers begin each performance.
-            </p>
-            {vsLoading && (
-              <p className="mt-2 text-xs" style={{ color: "var(--ink-muted)" }}>Connecting to festival servers…</p>
-            )}
-          </div>
+          ) : (
+            <div
+              className="rounded-3xl p-8 text-center space-y-4 bg-white border border-slate-200 shadow-md"
+            >
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-purple-50 text-purple-600 shadow-xs">
+                <i className="bi bi-music-note-beamed text-3xl" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Rating is currently closed
+                </h2>
+                <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                  Keep this page open — live star rating and liking begins when stage organizers schedule and launch acts.
+                </p>
+              </div>
+              <div>
+                <Link
+                  href="/student/dashboard"
+                  className="tap-scale inline-flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 px-4 py-2 text-xs font-bold text-slate-700 transition"
+                >
+                  <i className="bi bi-arrow-left text-purple-600 text-xs" />
+                  <span>Return to Student Dashboard</span>
+                </Link>
+              </div>
+            </div>
+          )
         )}
 
-        {/* Registration details card */}
+        {/* Festival lineup with cards and images */}
         <div
-          className="rounded-[20px] p-5"
-          style={{ background: "var(--surface)", boxShadow: "var(--shadow-card)" }}
+          className="rounded-3xl p-5 sm:p-6 bg-white border border-slate-200 shadow-sm space-y-4"
         >
-          <h2 className="text-base font-bold mb-3 flex items-center gap-2" style={{ color: "var(--ink)" }}>
-            <User className="h-4 w-4" aria-hidden="true" />
-            Your Voter Registration
-          </h2>
-          <dl className="space-y-2 text-sm">
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <dt style={{ color: "var(--ink-muted)" }}>Name</dt>
-              <dd className="font-medium" style={{ color: "var(--ink)" }}>{profile?.fullName}</dd>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <dt style={{ color: "var(--ink-muted)" }}>Email</dt>
-              <dd className="font-medium font-mono text-xs" style={{ color: "var(--ink)" }}>{maskedEmail}</dd>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <dt style={{ color: "var(--ink-muted)" }}>Status</dt>
-              <dd className="flex items-center gap-1 font-semibold" style={{ color: "var(--success)" }}>
-                <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                Verified Voter
-              </dd>
-            </div>
-            {dept && (
-              <div className="flex flex-wrap items-center justify-between gap-1">
-                <dt style={{ color: "var(--ink-muted)" }}>Department</dt>
-                <dd><DepartmentChip name={dept.name} shortName={dept.shortName} color={dept.color} /></dd>
-              </div>
-            )}
-            {profile?.year && (
-              <div className="flex flex-wrap items-center justify-between gap-1">
-                <dt style={{ color: "var(--ink-muted)" }}>Year</dt>
-                <dd className="font-semibold" style={{ color: "var(--ink)" }}>{formatYearLabel(profile.year)}</dd>
-              </div>
-            )}
-            {profile?.section && (
-              <div className="flex flex-wrap items-center justify-between gap-1">
-                <dt style={{ color: "var(--ink-muted)" }}>Section</dt>
-                <dd className="font-semibold" style={{ color: "var(--ink)" }}>Section {profile.section}</dd>
-              </div>
-            )}
-            {profile?.studentId && (
-              <div className="flex flex-wrap items-center justify-between gap-1">
-                <dt style={{ color: "var(--ink-muted)" }}>Register No.</dt>
-                <dd className="font-mono text-xs font-medium" style={{ color: "var(--ink)" }}>{profile.studentId}</dd>
-              </div>
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <dt style={{ color: "var(--ink-muted)" }}>Registered</dt>
-              <dd className="font-medium" style={{ color: "var(--ink)" }}>{formatDate(profile?.createdAt || profile?.registeredAt)}</dd>
-            </div>
-          </dl>
-        </div>
-
-        {/* Festival lineup */}
-        <div
-          className="rounded-[20px] p-5"
-          style={{ background: "var(--surface)", boxShadow: "var(--shadow-card)" }}
-        >
-          <h2 className="text-base font-bold mb-3 flex items-center gap-2" style={{ color: "var(--ink)" }}>
-            <Music className="h-4 w-4" aria-hidden="true" />
-            Festival Lineup
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-extrabold flex items-center gap-2 text-slate-900">
+              <i className="bi bi-music-note-beamed text-purple-600" aria-hidden="true" />
+              Festival Lineup
+            </h2>
+            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-100">
+              {performances.length} {performances.length === 1 ? "Performance" : "Performances"}
+            </span>
+          </div>
 
           {perfsLoading ? (
-            <div className="space-y-2 animate-pulse">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-14 rounded-xl" style={{ background: "var(--surface-alt)" }} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-pulse">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-64 rounded-2xl bg-slate-100" />
               ))}
             </div>
           ) : performances.length === 0 ? (
@@ -510,58 +724,97 @@ function VoteDashboard() {
               description="The lineup will appear here once stage organizers schedule acts."
             />
           ) : (
-            <ol className="space-y-2.5" aria-label="Performance lineup">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {performances.map((perf, index) => {
                 const pDept = deptMap[perf.departmentId];
                 const pCat = catMap[perf.categoryId];
                 const isCurrent = perf.id === activePerfId && isOpen;
+                const isCompleted = perf.status === "completed";
+                const imgUrl = getPerformanceImage(perf, pCat);
 
                 return (
-                  <li
+                  <div
                     key={perf.id}
-                    className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 transition-all ${
+                    className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-xs transition-all hover:shadow-md ${
                       isCurrent
-                        ? "border-2 border-purple-400 bg-purple-50/70 shadow-sm"
-                        : "border border-slate-100 bg-white"
+                        ? "ring-2 ring-purple-500 border-purple-400"
+                        : "border-slate-200"
                     }`}
                   >
-                    <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold tabular-nums ${
-                        isCurrent
-                          ? "bg-purple-600 text-white"
-                          : "bg-purple-100 text-purple-700"
-                      }`}
-                      aria-label={`Performance ${index + 1}`}
-                    >
-                      {index + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold truncate text-slate-900">
-                          {perf.name}
-                        </p>
-                        {isCurrent && (
-                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 animate-pulse">
-                            LIVE
+                    {/* Card Cover Image Banner */}
+                    <div className="relative aspect-16/10 w-full overflow-hidden bg-slate-100">
+                      <img
+                        src={imgUrl}
+                        alt={perf.name}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+
+                      {/* Department badge */}
+                      {pDept && (
+                        <div className="absolute top-2.5 left-2.5">
+                          <span
+                            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-black text-white shadow-sm"
+                            style={{ backgroundColor: pDept.color }}
+                          >
+                            {pDept.shortName}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Status badge */}
+                      <div className="absolute top-2.5 right-2.5">
+                        {isCurrent ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-sm animate-pulse">
+                            <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                            LIVE NOW
+                          </span>
+                        ) : isCompleted ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                            <i className="bi bi-star-fill text-[10px] text-amber-300" />
+                            {perf.averageRating ? perf.averageRating.toFixed(1) : "0"}★ ({perf.percentageScore ? `${perf.percentageScore.toFixed(0)}%` : "0%"})
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-black/60 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-slate-200">
+                            #{index + 1} Scheduled
                           </span>
                         )}
                       </div>
-                      <p className="text-xs truncate text-slate-500">
-                        {pCat?.name ?? "General"}
-                      </p>
+
+                      {/* Category pill */}
+                      {pCat && (
+                        <div className="absolute bottom-2 left-2.5">
+                          <span className="rounded-md bg-white/90 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-slate-800">
+                            {pCat.name}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {pDept && (
-                      <DepartmentChip
-                        name={pDept.name}
-                        shortName={pDept.shortName}
-                        color={pDept.color}
-                        className="shrink-0"
-                      />
-                    )}
-                  </li>
+
+                    {/* Card Body */}
+                    <div className="flex flex-1 flex-col p-4 space-y-1">
+                      <h4 className="font-extrabold text-slate-900 text-base leading-snug line-clamp-1">
+                        {perf.name}
+                      </h4>
+                      {perf.participants ? (
+                        <p className="text-xs font-semibold text-purple-700 flex items-center gap-1">
+                          <i className="bi bi-people-fill text-xs shrink-0" />
+                          <span className="truncate">{perf.participants}</span>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-slate-400">{pDept?.name ?? "Department Act"}</p>
+                      )}
+
+                      {perf.description && (
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed pt-1">
+                          {perf.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
-            </ol>
+            </div>
           )}
         </div>
       </main>

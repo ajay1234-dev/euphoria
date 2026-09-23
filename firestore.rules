@@ -38,7 +38,7 @@ service cloud.firestore {
 
     // ───────── Validators ─────────
     function validConfig(d) {
-      return d.keys().hasOnly(['festName','activeEventId','allowedEmailDomains','blockPlusAddressing','requireStudentId','studentIdPattern','registrationOpen','sections','updatedAt'])
+      return d.keys().hasOnly(['festName','activeEventId','allowedEmailDomains','blockPlusAddressing','requireStudentId','studentIdPattern','registrationOpen','eventOpen','sections','updatedAt'])
         && d.keys().hasAll(['festName','activeEventId','allowedEmailDomains','blockPlusAddressing','requireStudentId','studentIdPattern','registrationOpen','updatedAt'])
         && isStr(d.festName, 2, 80)
         && isStr(d.activeEventId, 1, 64)
@@ -47,6 +47,7 @@ service cloud.firestore {
         && d.requireStudentId is bool
         && (d.studentIdPattern == null || isStr(d.studentIdPattern, 1, 200))
         && d.registrationOpen is bool
+        && (!('eventOpen' in d) || d.eventOpen is bool)
         && (!('sections' in d) || (d.sections is list && d.sections.size() >= 1 && d.sections.size() <= 20))
         && d.updatedAt == request.time;
     }
@@ -133,7 +134,7 @@ service cloud.firestore {
     }
 
     function validPerformance(d) {
-      return d.keys().hasOnly(['departmentId','categoryId','name','description','order','status','votingStartedAt','votingEndsAt','createdAt','updatedAt'])
+      return d.keys().hasOnly(['departmentId','categoryId','name','description','order','status','votingStartedAt','votingEndsAt','imageUrl','participants','createdAt','updatedAt'])
         && d.keys().hasAll(['departmentId','categoryId','name','description','order','status','votingStartedAt','votingEndsAt','createdAt','updatedAt'])
         && isStr(d.departmentId, 1, 64) && exists(/databases/$(database)/documents/departments/$(d.departmentId))
         && isStr(d.categoryId, 1, 64)   && exists(/databases/$(database)/documents/categories/$(d.categoryId))
@@ -142,7 +143,9 @@ service cloud.firestore {
         && d.order is int && d.order >= 0 && d.order <= 1000
         && d.status in ['scheduled','live','completed']
         && (d.votingStartedAt == null || d.votingStartedAt is timestamp)
-        && (d.votingEndsAt == null || d.votingEndsAt is timestamp);
+        && (d.votingEndsAt == null || d.votingEndsAt is timestamp)
+        && (!('imageUrl' in d) || d.imageUrl == null || (d.imageUrl is string && d.imageUrl.size() <= 1000000))
+        && (!('participants' in d) || d.participants == null || isStr(d.participants, 1, 200));
     }
 
     function validState(d) {
@@ -210,14 +213,14 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAdmin() && validDepartment(request.resource.data) && createStamps(request.resource.data);
       allow update: if isAdmin() && validDepartment(request.resource.data) && updateStamps(request.resource.data);
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     match /categories/{categoryId} {
       allow read: if isAdminOrStudent();
       allow create: if isAdmin() && validCategory(request.resource.data) && createStamps(request.resource.data);
       allow update: if isAdmin() && validCategory(request.resource.data) && updateStamps(request.resource.data);
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     match /events/{eventId} {
@@ -233,13 +236,14 @@ service cloud.firestore {
                       && request.resource.data.status == 'scheduled'
                       && request.resource.data.votingStartedAt == null && request.resource.data.votingEndsAt == null;
         allow update: if isStaff() || (isAdmin() && validPerformance(request.resource.data) && updateStamps(request.resource.data));
-        allow delete: if isAdmin() && resource.data.status == 'scheduled';
+        allow delete: if isAdmin();
 
         match /votes/{studentUid} {
           allow get: if signedIn() && (request.auth.uid == studentUid || isStaff());
           allow list: if isStaff();
           // Votes are immutable — create only, no updates allowed.
           // Minimal doc: only studentUid + rating + createdAt (no personal data).
+          // Department block: students may NOT vote for their own department's performance.
           allow create: if signedIn()
                         && request.auth.uid == studentUid
                         && request.resource.data.keys().hasOnly(['studentUid','rating','createdAt'])
@@ -250,8 +254,15 @@ service cloud.firestore {
                         && request.resource.data.createdAt == request.time
                         && exists(/databases/$(database)/documents/events/$(eventId)/state/current)
                         && get(/databases/$(database)/documents/events/$(eventId)/state/current).data.status == 'open'
-                        && get(/databases/$(database)/documents/events/$(eventId)/state/current).data.activePerformanceId == performanceId;
-          allow delete: if false;
+                        && get(/databases/$(database)/documents/events/$(eventId)/state/current).data.activePerformanceId == performanceId
+                        // Block students from voting for their own department's act
+                        && (
+                          !exists(/databases/$(database)/documents/users/$(studentUid))
+                          || !exists(/databases/$(database)/documents/events/$(eventId)/performances/$(performanceId))
+                          || get(/databases/$(database)/documents/users/$(studentUid)).data.departmentId == null
+                          || get(/databases/$(database)/documents/events/$(eventId)/performances/$(performanceId)).data.departmentId != get(/databases/$(database)/documents/users/$(studentUid)).data.departmentId
+                        );
+          allow delete: if isStaff();
         }
       }
 
@@ -259,6 +270,11 @@ service cloud.firestore {
         allow read: if isAdminOrStudent();
         allow create, update: if isStaff() && validState(request.resource.data);
         allow delete: if false;
+      }
+
+      match /projection/{docId} {
+        allow read: if isAdminOrStudent();
+        allow write: if isStaff();
       }
     }
   }

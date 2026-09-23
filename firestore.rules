@@ -5,8 +5,7 @@ service cloud.firestore {
     // ───────── Helpers ─────────
     function signedIn()    { return request.auth != null; }
     function isAdmin()     { return signedIn() && request.auth.token.admin == true; }
-    function isOrganizer() { return signedIn() && request.auth.token.organizer == true; }
-    function isStaff()     { return isAdmin() || isOrganizer(); }
+    function isStaff()     { return isAdmin(); }
     function hasAppConfig() { return exists(/databases/$(database)/documents/config/app); }
     function appConfig()   { return get(/databases/$(database)/documents/config/app).data; }
     function isRegOpen()   { return !hasAppConfig() || appConfig().registrationOpen == true; }

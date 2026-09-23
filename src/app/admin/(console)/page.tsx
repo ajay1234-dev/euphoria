@@ -393,7 +393,17 @@ export default function AdminOverviewPage() {
             Live stage control, festival health, and registration management
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <a
+            href="/projector/timer"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 transition hover:bg-amber-100 shadow-xs"
+            title="Open Live Stage Timer Projector in auditorium window"
+          >
+            <i className="bi bi-stopwatch text-amber-700 text-sm" />
+            <span>Timer Projector ↗</span>
+          </a>
           <Link
             href="/admin/projection"
             className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-900 transition hover:bg-purple-100 shadow-xs"
@@ -496,7 +506,18 @@ export default function AdminOverviewPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href="/projector/timer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-900 transition hover:bg-amber-100 shadow-2xs"
+                title="Open Live Stage Timer Projector in auditorium window"
+              >
+                <i className="bi bi-display text-amber-700 text-xs" />
+                <span>Timer Projector ↗</span>
+              </a>
+
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
                   isOpen ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-600"

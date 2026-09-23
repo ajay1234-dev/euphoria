@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { doc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useActiveEvent, useDepartments, useCategories, usePerformances } from "@/hooks/useData";
+import { useAppConfig, useActiveEvent, useDepartments, useCategories, usePerformances } from "@/hooks/useData";
 import { useVotingState } from "@/hooks/useVotingState";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { TestModeBanner } from "@/components/common/TestModeBanner";
@@ -13,7 +13,12 @@ import { DepartmentChip } from "@/components/common/DepartmentChip";
 import { EmptyState } from "@/components/common/EmptyState";
 import { FestBackground } from "@/components/common/FestBackground";
 import { formatDate } from "@/lib/utils";
-import { formatYearLabel } from "@/config/departments";
+import {
+  formatYearLabel,
+  OFFICIAL_DEPARTMENTS_LIST,
+  SHORT_CODE_TO_DEPT_CODE,
+  DEPT_CODE_TO_SHORT_CODE,
+} from "@/config/departments";
 import { getPerformanceImage } from "@/config/constants";
 
 import PeekRating from "@/components/ui/PeekRating";
@@ -50,7 +55,9 @@ const RATING_DESCRIPTIONS: Record<number, string> = {
 };
 
 function VoteDashboard() {
-  const { profile, config, signOutUser } = useAuth();
+  const { profile, config: authConfig, signOutUser } = useAuth();
+  const { config: liveAppConfig } = useAppConfig();
+  const config = liveAppConfig || authConfig;
   const { event } = useActiveEvent(config?.activeEventId);
   const { departments } = useDepartments();
   const { categories } = useCategories();
@@ -65,34 +72,135 @@ function VoteDashboard() {
   const [voteError, setVoteError] = useState<string | null>(null);
   const [justVoted, setJustVoted] = useState(false);
 
-  const deptMap = Object.fromEntries(departments.map((d) => [d.id, d]));
-  const catMap = Object.fromEntries(categories.map((c) => [c.id, c]));
-  const dept = profile?.departmentId ? deptMap[profile.departmentId] : null;
+  // Department mapping — indexes docId, official codes, short codes, and custom colors
+  const deptMap = useMemo(() => {
+    const map: Record<string, { id: string; name: string; shortName: string; color: string; code?: string }> = {};
+
+    OFFICIAL_DEPARTMENTS_LIST.forEach((d) => {
+      const entry = { id: d.code, name: d.name, shortName: d.shortCode, color: d.color, code: d.code };
+      map[d.code] = entry;
+      map[d.shortCode] = entry;
+      map[d.shortCode.toLowerCase()] = entry;
+      map[`dept-${d.shortCode.toLowerCase()}`] = entry;
+      map[d.name.toLowerCase()] = entry;
+    });
+
+    departments.forEach((d) => {
+      const short = (d.shortName || (d as unknown as { shortCode?: string }).shortCode || "").trim();
+      const sLower = short.toLowerCase();
+      const code = (d as unknown as { code?: string }).code || SHORT_CODE_TO_DEPT_CODE[sLower] || "";
+      const color = d.color || "#7C3AED";
+      const entry = { id: d.id, name: d.name, shortName: short || d.name, color, code };
+
+      map[d.id] = entry;
+      if (code) {
+        map[code] = entry;
+        map[code.toLowerCase()] = entry;
+      }
+      if (short) {
+        map[short] = entry;
+        map[sLower] = entry;
+        map[`dept-${sLower}`] = entry;
+      }
+      if (d.name) {
+        map[d.name.toLowerCase()] = entry;
+      }
+    });
+
+    return map;
+  }, [departments]);
+
+  // Robust department resolver
+  const resolveDept = useCallback(
+    (deptId: string | null | undefined, actTitle?: string) => {
+      if (!deptId) return null;
+      if (deptMap[deptId]) return deptMap[deptId];
+      if (deptMap[deptId.toLowerCase()]) return deptMap[deptId.toLowerCase()];
+
+      const lower = deptId.toLowerCase();
+      if (SHORT_CODE_TO_DEPT_CODE[lower] && deptMap[SHORT_CODE_TO_DEPT_CODE[lower]]) {
+        return deptMap[SHORT_CODE_TO_DEPT_CODE[lower]];
+      }
+      if (DEPT_CODE_TO_SHORT_CODE[deptId] && deptMap[DEPT_CODE_TO_SHORT_CODE[deptId]]) {
+        return deptMap[DEPT_CODE_TO_SHORT_CODE[deptId]];
+      }
+
+      if (actTitle) {
+        const prefix = (actTitle.split("—")[0] || actTitle.split("-")[0] || "").trim();
+        const pLower = prefix.toLowerCase();
+        if (prefix && deptMap[prefix]) return deptMap[prefix];
+        if (pLower && deptMap[pLower]) return deptMap[pLower];
+        if (SHORT_CODE_TO_DEPT_CODE[pLower] && deptMap[SHORT_CODE_TO_DEPT_CODE[pLower]]) {
+          return deptMap[SHORT_CODE_TO_DEPT_CODE[pLower]];
+        }
+      }
+
+      return (
+        Object.values(deptMap).find(
+          (d) =>
+            d.id === deptId ||
+            d.shortName.toLowerCase() === lower ||
+            d.name.toLowerCase().includes(lower)
+        ) || null
+      );
+    },
+    [deptMap]
+  );
+
+  const catMap = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
+  const dept = profile?.departmentId ? resolveDept(profile.departmentId) : null;
   const isTestEvent = event?.isTest ?? false;
 
   const isOpen = votingState?.status === "open";
   const activePerfId = votingState?.activePerformanceId;
   const activePerf = performances.find((p) => p.id === activePerfId);
-  const activePerfDept = activePerf?.departmentId ? deptMap[activePerf.departmentId] : null;
+  const activePerfDept = activePerf ? resolveDept(activePerf.departmentId, activePerf.name) : null;
   const activePerfCat = activePerf?.categoryId ? catMap[activePerf.categoryId] : null;
+
+  // Student's department resolution
+  const studentDept = useMemo(() => {
+    return (
+      resolveDept(profile?.departmentId) ||
+      resolveDept(profile?.departmentCode) ||
+      resolveDept(profile?.department) ||
+      null
+    );
+  }, [profile, resolveDept]);
 
   // ── Event Day Gate: when eventOpen is false, show Coming Soon screen ──────
   const isSystemOpen = config?.eventOpen === true;
 
   // ── Department voting block: student cannot vote for their own dept's act ──
-  // Checks departmentId, departmentCode (e.g. IT, 103), and full department name
-  const isStudentDeptBlocked =
-    isOpen &&
-    activePerf?.departmentId != null &&
-    Boolean(
-      (profile?.departmentId && activePerf.departmentId === profile.departmentId) ||
-      (profile?.departmentCode && activePerfDept?.shortName &&
-        profile.departmentCode.toLowerCase() === activePerfDept.shortName.toLowerCase()) ||
-      (profile?.departmentCode && (activePerfDept as unknown as { code?: string })?.code &&
-        profile.departmentCode.toLowerCase() === (activePerfDept as unknown as { code?: string }).code?.toLowerCase()) ||
-      (profile?.department && activePerfDept?.name &&
-        profile.department.toLowerCase() === activePerfDept.name.toLowerCase())
-    );
+  // Checks departmentId, numeric code (e.g. 205, 104), short code (IT, CSE), and act title prefix
+  const isStudentDeptBlocked = useMemo(() => {
+    if (!isOpen || !activePerf || (!activePerfDept && !activePerf.departmentId)) return false;
+
+    // 1. Direct ID or Code match
+    if (profile?.departmentId && activePerf.departmentId && profile.departmentId === activePerf.departmentId) return true;
+    if (profile?.departmentCode && activePerf.departmentId && (profile.departmentCode === activePerf.departmentId || profile.departmentCode.toLowerCase() === activePerf.departmentId.toLowerCase())) return true;
+
+    // 2. Compare resolved department objects
+    if (studentDept && activePerfDept) {
+      if (studentDept.id === activePerfDept.id) return true;
+      if (studentDept.shortName.toLowerCase() === activePerfDept.shortName.toLowerCase()) return true;
+      if (studentDept.code && activePerfDept.code && studentDept.code === activePerfDept.code) return true;
+      if (studentDept.name.toLowerCase() === activePerfDept.name.toLowerCase()) return true;
+    }
+
+    // 3. Compare student properties against act title prefix (e.g. "IT — Dynamic Troupe")
+    if (activePerf.name) {
+      const prefix = (activePerf.name.split("—")[0] || activePerf.name.split("-")[0] || "").trim().toLowerCase();
+      if (prefix) {
+        const perfCode = SHORT_CODE_TO_DEPT_CODE[prefix] || prefix;
+        const studentCode = profile?.departmentCode?.toLowerCase() || (studentDept?.code ? studentDept.code.toLowerCase() : "");
+        const studentShort = profile?.department?.toLowerCase() || (studentDept?.shortName ? studentDept.shortName.toLowerCase() : "");
+        if (studentCode && (studentCode === perfCode || studentCode === prefix)) return true;
+        if (studentShort && (studentShort === prefix || studentShort === perfCode)) return true;
+      }
+    }
+
+    return false;
+  }, [isOpen, activePerf, activePerfDept, studentDept, profile]);
 
   const endsAtMs = votingState?.votingEndsAt ? votingState.votingEndsAt.toMillis() : null;
   const remaining = useCountdown(isOpen ? endsAtMs : null, serverOffsetMs);
@@ -143,7 +251,12 @@ function VoteDashboard() {
 
   // Handle vote submission — minimal vote doc per Phase 2 spec (no personal data)
   const handleVote = async () => {
+    if (submitting) return; // Prevent double-tap on mobile touchscreens
     if (!config?.activeEventId || !activePerfId || !profile?.uid) return;
+    if (isStudentDeptBlocked) {
+      setVoteError("Festival fairness rule: You cannot rate your own department's performance.");
+      return;
+    }
     if (!selectedRating || selectedRating < 1 || selectedRating > 5) {
       setVoteError("Please tap 1 to 5 hearts to select your rating before submitting.");
       return;
@@ -155,6 +268,10 @@ function VoteDashboard() {
     }
     setSubmitting(true);
     setVoteError(null);
+
+    // Optimistic UI response so mobile user sees instant confirmation
+    setExistingVote(selectedRating);
+    setJustVoted(true);
 
     try {
       const voteDocRef = doc(
@@ -173,10 +290,11 @@ function VoteDashboard() {
         rating: selectedRating,
         createdAt: serverTimestamp(),
       });
-
-      setJustVoted(true);
     } catch (e: unknown) {
-      setVoteError((e as Error).message ?? "Failed to submit rating. Please try again.");
+      // Revert optimistic state on failure
+      setJustVoted(false);
+      setExistingVote(null);
+      setVoteError((e as Error).message ?? "Failed to submit rating. Please check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -210,38 +328,38 @@ function VoteDashboard() {
 
       {/* Header */}
       <header
-        className="sticky top-0 z-10 flex items-center justify-between px-3 sm:px-4 py-3"
+        className="sticky top-0 z-10 flex items-center justify-between px-2.5 sm:px-4 py-2.5 sm:py-3"
         style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
       >
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           <Link
             href="/student/dashboard"
-            className="tap-scale flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-50 shadow-xs transition"
+            className="tap-scale flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 sm:px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-50 shadow-xs transition shrink-0"
             title="Back to Student Dashboard"
           >
             <i className="bi bi-arrow-left text-purple-700 text-xs" />
-            <span className="font-bold">Dashboard</span>
+            <span className="font-bold hidden xs:inline">Dashboard</span>
           </Link>
           <span
-            className="text-base sm:text-lg font-bold"
+            className="text-sm sm:text-base md:text-lg font-bold truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none"
             style={{ fontFamily: "var(--font-bricolage)", color: "var(--primary)" }}
           >
             {config?.festName ?? "Euphoria"}
           </span>
-          <span className="hidden xs:inline text-xs font-semibold text-slate-400">·</span>
-          <span className="hidden xs:inline text-xs font-bold text-slate-600">Live Rating &amp; Likes</span>
+          <span className="hidden sm:inline text-xs font-semibold text-slate-400">·</span>
+          <span className="hidden sm:inline text-xs font-bold text-slate-600">Live Rating &amp; Likes</span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {dept && (
             <DepartmentChip name={dept.name} shortName={dept.shortName} color={dept.color} />
           )}
           <button
             onClick={signOutUser}
-            className="flex items-center gap-1.5 rounded-[10px] border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+            className="flex items-center gap-1 sm:gap-1.5 rounded-[10px] border border-slate-200 px-2 sm:px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
             aria-label="Sign out"
           >
             <i className="bi bi-box-arrow-right text-xs" aria-hidden="true" />
-            <span className="hidden sm:inline">Sign out</span>
+            <span className="hidden md:inline">Sign out</span>
           </button>
         </div>
       </header>
@@ -249,39 +367,39 @@ function VoteDashboard() {
       {/* ── EVENT DAY GATE — full screen Coming Soon when system is closed ── */}
       {!isSystemOpen && (
         <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center text-center px-6"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center text-center px-4 sm:px-6"
           style={{ background: "var(--bg)" }}
         >
           <FestBackground />
-          <div className="relative z-10 flex flex-col items-center gap-6 max-w-sm">
+          <div className="relative z-10 flex flex-col items-center gap-5 sm:gap-6 max-w-sm w-full">
             {/* Lock icon */}
             <div
-              className="flex h-24 w-24 items-center justify-center rounded-full shadow-xl"
+              className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full shadow-xl"
               style={{ background: "var(--gradient-hero)" }}
             >
-              <i className="bi bi-lock-fill text-white text-5xl" />
+              <i className="bi bi-lock-fill text-white text-4xl sm:text-5xl" />
             </div>
             {/* Title */}
             <div className="space-y-2">
               <h1
-                className="text-4xl font-black tracking-tight"
+                className="text-3xl sm:text-4xl font-black tracking-tight"
                 style={{ fontFamily: "var(--font-bricolage)", color: "var(--ink)" }}
               >
                 {config?.festName ?? "Euphoria 2026"}
               </h1>
-              <p className="text-xl font-bold" style={{ color: "var(--ink)" }}>
+              <p className="text-lg sm:text-xl font-bold" style={{ color: "var(--ink)" }}>
                 Rating &amp; Likes Open on Event Day
               </p>
-              <p className="text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+              <p className="text-xs sm:text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
                 The live rating and likes system will be unlocked by the admin on the day of the festival.
                 Please check back then — this page will automatically update!
               </p>
             </div>
             {/* Action buttons on lock screen */}
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-3 w-full">
               <Link
                 href="/student/dashboard"
-                className="tap-scale inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-5 py-2.5 text-xs font-bold text-slate-800 shadow-sm hover:bg-slate-50 transition"
+                className="tap-scale inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-200 px-5 py-2.5 text-xs font-bold text-slate-800 shadow-sm hover:bg-slate-50 transition w-full max-w-xs"
               >
                 <i className="bi bi-arrow-left text-purple-600 text-sm" />
                 <span>Return to Student Dashboard</span>
@@ -296,7 +414,7 @@ function VoteDashboard() {
         </div>
       )}
 
-      <main id="main-content" className="mx-auto max-w-2xl px-4 py-6 space-y-5" tabIndex={-1}>
+      <main id="main-content" className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-5" tabIndex={-1}>
         {/* Test mode banner */}
         {isTestEvent && <TestModeBanner />}
 
@@ -464,6 +582,37 @@ function VoteDashboard() {
                   </Link>
                 </div>
               </div>
+            ) : isStudentDeptBlocked ? (
+              /* Fairness Protection Active — Student's Own Department Act */
+              <div className="rounded-3xl p-6 sm:p-8 text-center space-y-4 bg-amber-50/90 border border-amber-200/80 shadow-md animate-fade-in">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-700 shadow-xs ring-4 ring-amber-50">
+                  <i className="bi bi-shield-lock-fill text-3xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <span className="inline-block text-xs font-black tracking-wider uppercase text-amber-800 bg-amber-200/80 px-3 py-1 rounded-full border border-amber-300/80">
+                    Festival Fairness Protection
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black text-amber-950 pt-1">
+                    {activePerfDept?.shortName ?? "Your Department"} Act is on Stage!
+                  </h3>
+                  <p className="text-sm text-amber-900/90 max-w-md mx-auto leading-relaxed">
+                    To ensure 100% fair and unbiased festival scoring, students from the performing department cannot vote or rate their own department&apos;s act.
+                  </p>
+                </div>
+                <div className="pt-2 text-xs font-semibold text-amber-800 flex items-center justify-center gap-1.5">
+                  <i className="bi bi-heart-fill text-amber-600 text-xs" />
+                  <span>Cheer loud from the auditorium! You will be able to rate the next act.</span>
+                </div>
+                <div className="pt-2">
+                  <Link
+                    href="/student/dashboard"
+                    className="tap-scale inline-flex items-center gap-2 rounded-xl bg-white border border-amber-200/80 px-4 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-amber-100/50 transition"
+                  >
+                    <i className="bi bi-arrow-left text-amber-700 text-xs" />
+                    <span>Return to Dashboard</span>
+                  </Link>
+                </div>
+              </div>
             ) : remaining === 0 ? (
               /* Review Timer Expired State — Review Window Stopped */
               <div className="rounded-3xl p-8 text-center space-y-4 bg-white border border-slate-200 shadow-md animate-fade-in">
@@ -475,7 +624,7 @@ function VoteDashboard() {
                     Rating Window Closed
                   </h3>
                   <p className="text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
-                    The review timer for this performance has ended. Ratings are now locked and being tabulated by stage organizers.
+                    The review timer for this performance has ended. Ratings are now locked and being tabulated.
                   </p>
                 </div>
                 <div className="pt-2">
@@ -589,23 +738,21 @@ function VoteDashboard() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
 
-                {/* Top-left department badge */}
-                {upcomingDept && (
-                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4">
+                {/* Top Badges Bar: Responsive Flex container preventing overlap on any mobile screen */}
+                <div className="absolute top-2.5 sm:top-3 inset-x-2.5 sm:inset-x-3 flex items-center justify-between gap-2 pointer-events-none z-10">
+                  {upcomingDept ? (
                     <span
-                      className="inline-flex items-center rounded-full px-3 py-1 text-xs sm:text-sm font-black text-white shadow-md backdrop-blur-xs"
+                      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-black text-white shadow-md backdrop-blur-xs truncate max-w-[45%] sm:max-w-[50%]"
                       style={{ backgroundColor: upcomingDept.color }}
+                      title={`${upcomingDept.name} (${upcomingDept.shortName})`}
                     >
-                      {upcomingDept.name} ({upcomingDept.shortName})
+                      {upcomingDept.shortName}
                     </span>
-                  </div>
-                )}
+                  ) : <span />}
 
-                {/* Top-right Standby Pill */}
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/80 backdrop-blur-md px-3 py-1 text-xs font-bold text-amber-300 border border-amber-300/30 shadow-md">
-                    <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
-                    STAGE STANDBY · UPCOMING ACT
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/90 backdrop-blur-md px-2.5 py-1 text-[11px] sm:text-xs font-bold text-amber-300 border border-amber-300/30 shadow-md shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping" />
+                    STANDBY · UPCOMING ACT
                   </span>
                 </div>
 
@@ -650,7 +797,7 @@ function VoteDashboard() {
                       Rating &amp; Likes will open when act goes live
                     </h4>
                     <p className="text-xs text-purple-800 leading-relaxed">
-                      Keep this page open! When the stage organizers trigger this performance from the admin console, your live heart &amp; star rating arena will automatically appear here.
+                      Keep this page open! When this performance is launched from the admin console, your live heart &amp; star rating arena will automatically appear here.
                     </p>
                   </div>
                 </div>
@@ -682,7 +829,7 @@ function VoteDashboard() {
                   Rating is currently closed
                 </h2>
                 <p className="text-sm text-slate-500 max-w-sm mx-auto">
-                  Keep this page open — live star rating and liking begins when stage organizers schedule and launch acts.
+                  Keep this page open — live star rating and liking begins when acts are launched from the admin console.
                 </p>
               </div>
               <div>
@@ -721,7 +868,7 @@ function VoteDashboard() {
           ) : performances.length === 0 ? (
             <EmptyState
               title="No performances scheduled yet"
-              description="The lineup will appear here once stage organizers schedule acts."
+              description="The lineup will appear here once acts are scheduled in the festival console."
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

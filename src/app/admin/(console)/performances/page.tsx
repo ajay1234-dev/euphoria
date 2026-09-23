@@ -447,6 +447,16 @@ export default function PerformancesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/projector/timer"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 transition hover:bg-amber-100 shadow-xs"
+            title="Open Live Stage Timer Projector in auditorium window"
+          >
+            <i className="bi bi-stopwatch text-amber-700 text-sm" />
+            <span>Timer Projector ↗</span>
+          </a>
           <Link
             href="/admin/projection"
             className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-900 transition hover:bg-purple-100 shadow-xs"

@@ -392,7 +392,7 @@ export default function RegisterPage() {
                   Registration is Currently Closed
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">
-                  Student registration for {festName} has been paused or locked by festival administrators. Please check back later or contact your college event organizer.
+                  Student registration for {festName} has been paused or locked by festival administrators. Please check back later or contact festival administration.
                 </p>
               </div>
 
@@ -735,9 +735,9 @@ export default function RegisterPage() {
             </Link>
           </p>
           <p className="text-[11px] text-slate-400">
-            Fest Organizers:{" "}
-            <Link href="/organizer/login" className="font-semibold text-amber-700 underline hover:text-amber-800">
-              Organizer Console
+            Fest Administrators:{" "}
+            <Link href="/admin/login" className="font-semibold text-purple-700 underline hover:text-purple-800">
+              Admin Console
             </Link>
           </p>
         </div>

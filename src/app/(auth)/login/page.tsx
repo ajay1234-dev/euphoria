@@ -287,9 +287,9 @@ export default function LoginPage() {
             </Link>
           </p>
           <p className="text-[11px] text-slate-400">
-            Fest Organizers:{" "}
-            <Link href="/organizer/login" className="font-semibold text-amber-700 underline hover:text-amber-800">
-              Organizer Console
+            Fest Administrators:{" "}
+            <Link href="/admin/login" className="font-semibold text-purple-700 underline hover:text-purple-800">
+              Admin Console
             </Link>
           </p>
         </div>

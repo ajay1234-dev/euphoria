@@ -153,8 +153,16 @@ export default function AdminProjectionPage() {
 
   const handleOpenProjector = () => {
     window.open(
-      `/organizer/results?set=${activeSetId}&test=${isTestMode ? "true" : "false"}`,
+      `/projector/results?set=${activeSetId}&test=${isTestMode ? "true" : "false"}`,
       "EuphoriaProjector",
+      "width=1920,height=1080,menubar=no,toolbar=no,location=no,status=no"
+    );
+  };
+
+  const handleOpenTimerProjector = () => {
+    window.open(
+      "/projector/timer",
+      "EuphoriaTimerProjector",
       "width=1920,height=1080,menubar=no,toolbar=no,location=no,status=no"
     );
   };
@@ -221,14 +229,22 @@ export default function AdminProjectionPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleOpenTimerProjector}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-all bg-amber-50 border border-amber-300 hover:bg-amber-100 text-amber-900 active:scale-95"
+            title="Open Live Stage Countdown Timer Projector in auditorium window"
+          >
+            <i className="bi bi-stopwatch text-amber-700" />
+            <span>Timer Projector ↗</span>
+          </button>
           <button
             onClick={handleOpenProjector}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm shadow-sm transition-all bg-white border hover:bg-slate-50 text-slate-800"
-            style={{ borderColor: "var(--border)" }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm shadow-xs transition-all bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 active:scale-95"
+            title="Open Results Bar Chart & Video Reveal Projector"
           >
             <i className="bi bi-box-arrow-up-right text-violet-600" />
-            <span>Open Projector Window</span>
+            <span>Results Projector ↗</span>
           </button>
         </div>
       </div>
@@ -524,7 +540,7 @@ export default function AdminProjectionPage() {
                     shortName: act.departmentId,
                     color: "#6366F1",
                   };
-                const score = act.percentageScore ?? 0;
+                const score = act.percentageScore ?? (act.averageRating ? (act.averageRating / 5) * 100 : 0);
                 const isRevealed = (state.currentIndex ?? 0) >= act.revealIndex;
                 const isCurrentlyActive = state.currentRank === act.rank;
 

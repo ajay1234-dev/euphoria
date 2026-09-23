@@ -436,6 +436,7 @@ export function CinematicProjector({
 
   // Column DOM references for pixel coordinate calculations
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const videoAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const activeVideoElRef = useRef<HTMLVideoElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSeqIdRef = useRef<string | null>(null);
@@ -484,8 +485,29 @@ export function CinematicProjector({
   }, []);
 
   // Calculate precise destination coordinates for label and video
-  const getColumnAnchors = useCallback((departmentId: string) => {
-    const el = columnRefs.current[departmentId];
+  const getColumnAnchors = useCallback((departmentId: string, actId?: string) => {
+    const el =
+      (actId ? columnRefs.current[actId] : null) ||
+      columnRefs.current[departmentId] ||
+      columnRefs.current[departmentId.toLowerCase()] ||
+      (SHORT_CODE_TO_DEPT_CODE[departmentId.toLowerCase()]
+        ? columnRefs.current[SHORT_CODE_TO_DEPT_CODE[departmentId.toLowerCase()]]
+        : null) ||
+      (DEPT_CODE_TO_SHORT_CODE[departmentId]
+        ? columnRefs.current[DEPT_CODE_TO_SHORT_CODE[departmentId]]
+        : null);
+
+    const anchorEl =
+      (actId ? videoAnchorRefs.current[actId] : null) ||
+      videoAnchorRefs.current[departmentId] ||
+      videoAnchorRefs.current[departmentId.toLowerCase()] ||
+      (SHORT_CODE_TO_DEPT_CODE[departmentId.toLowerCase()]
+        ? videoAnchorRefs.current[SHORT_CODE_TO_DEPT_CODE[departmentId.toLowerCase()]]
+        : null) ||
+      (DEPT_CODE_TO_SHORT_CODE[departmentId]
+        ? videoAnchorRefs.current[DEPT_CODE_TO_SHORT_CODE[departmentId]]
+        : null);
+
     if (!el || typeof window === "undefined") {
       return { colX: 0, colY: 0, targetX: 0, targetY: 0 };
     }
@@ -497,9 +519,15 @@ export function CinematicProjector({
     const labelDestX = rect.left + rect.width / 2;
     const labelDestY = rect.bottom - 40;
 
-    // Anchor directly above the vertical bar
-    const videoDestX = rect.left + rect.width / 2;
-    const videoDestY = rect.top + 70;
+    // Center of designated video slot directly ABOVE the percentage badge
+    let videoDestX = rect.left + rect.width / 2;
+    let videoDestY = rect.top + 45;
+
+    if (anchorEl) {
+      const aRect = anchorEl.getBoundingClientRect();
+      videoDestX = aRect.left + aRect.width / 2;
+      videoDestY = aRect.top + aRect.height / 2;
+    }
 
     return {
       colX: labelDestX - centerX,
@@ -526,7 +554,7 @@ export function CinematicProjector({
       const rank = act.rank;
 
       setActiveStepIndex(stepIndex);
-      const anchors = getColumnAnchors(act.departmentId);
+      const anchors = getColumnAnchors(act.departmentId, act.id);
 
       // ── TOP 3 PODIUM RANKS (3rd, 2nd, 1st place): VIDEO PLAYS FIRST! ──
       if (rank <= 3) {
@@ -705,7 +733,7 @@ export function CinematicProjector({
       [3, 2, 1].forEach((r) => {
         const act = revealOrderActs.find((a) => a.rank === r);
         if (act) {
-          const anchors = getColumnAnchors(act.departmentId);
+          const anchors = getColumnAnchors(act.departmentId, act.id);
           const assets = getVideoForRank(activeSetId, r as 1 | 2 | 3);
           settledBatch[r] = {
             rank: r as 1 | 2 | 3,
@@ -857,45 +885,63 @@ export function CinematicProjector({
         {revealOrderActs.map((act, idx) => {
           const dept = resolveDept(act.departmentId, (act as any).name || (act as any).title);
           const isRevealed = revealedIndices.includes(idx);
-          const score = act.percentageScore ?? 0;
+          const score = act.percentageScore ?? (act.averageRating ? (act.averageRating / 5) * 100 : 0);
           const rank = act.rank;
 
           return (
             <div
               key={act.id}
               ref={(el) => {
-                columnRefs.current[act.departmentId] = el;
+                if (act.id) columnRefs.current[act.id] = el;
+                if (act.departmentId) {
+                  columnRefs.current[act.departmentId] = el;
+                  columnRefs.current[act.departmentId.toLowerCase()] = el;
+                }
               }}
               className={`flex-1 flex flex-col items-center justify-end h-full max-w-[125px] relative transition-opacity duration-300 ${
                 isRevealed ? "opacity-100" : "opacity-0"
               }`}
             >
               {/* Space reserved above bar for settled video and percentage */}
-              <div className="h-32 flex flex-col items-center justify-end mb-3 relative w-full">
-                {/* Bold, Highly Visible Progressive Percentage Counter */}
-                {isRevealed && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 12, scale: 0.8 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ delay: 0.1, duration: 0.4 }}
-                    className="inline-flex items-center justify-center px-3 py-1 rounded-2xl bg-white shadow-xl border-2 tabular-nums"
-                    style={{
-                      borderColor: dept.color,
-                      boxShadow: `0 8px 24px -4px ${dept.color}40`,
-                    }}
-                  >
-                    <span
-                      className="text-lg sm:text-2xl md:text-3xl font-mono font-black tracking-tight drop-shadow-xs"
-                      style={{ color: dept.color }}
+              <div className="flex flex-col items-center justify-end mb-2.5 relative w-full">
+                {/* Dedicated Anchor Slot for 3D character video (ranks 3, 2, 1) */}
+                <div
+                  ref={(el) => {
+                    if (act.id) videoAnchorRefs.current[act.id] = el;
+                    if (act.departmentId) {
+                      videoAnchorRefs.current[act.departmentId] = el;
+                      videoAnchorRefs.current[act.departmentId.toLowerCase()] = el;
+                    }
+                  }}
+                  className="h-24 w-full flex items-center justify-center relative pointer-events-none"
+                />
+
+                {/* Bold, Highly Visible Progressive Percentage Counter (cleanly below video, above bar) */}
+                <div className="h-11 flex items-center justify-center relative w-full z-20">
+                  {isRevealed && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: 0.1, duration: 0.4 }}
+                      className="inline-flex items-center justify-center px-3 py-1 rounded-2xl bg-white shadow-xl border-2 tabular-nums"
+                      style={{
+                        borderColor: dept.color,
+                        boxShadow: `0 8px 24px -4px ${dept.color}40`,
+                      }}
                     >
-                      <AnimatedPercentageCounter value={score} duration={1400} />
-                    </span>
-                  </motion.div>
-                )}
+                      <span
+                        className="text-lg sm:text-2xl md:text-3xl font-mono font-black tracking-tight drop-shadow-xs"
+                        style={{ color: dept.color }}
+                      >
+                        <AnimatedPercentageCounter value={score} duration={1400} />
+                      </span>
+                    </motion.div>
+                  )}
+                </div>
               </div>
 
               {/* Strictly Vertical Bar Container */}
-              <div className="w-12 sm:w-16 md:w-20 h-[52vh] bg-slate-100 rounded-t-2xl flex flex-col justify-end p-1 relative overflow-hidden border border-slate-200/80">
+              <div className="w-12 sm:w-16 md:w-20 h-[48vh] bg-slate-100 rounded-t-2xl flex flex-col justify-end p-1 relative overflow-hidden border border-slate-200/80">
                 {/* Visual bar baseline guides */}
                 <div className="absolute inset-x-0 bottom-1/4 border-b border-dashed border-slate-200/80 pointer-events-none" />
                 <div className="absolute inset-x-0 bottom-2/4 border-b border-dashed border-slate-200/80 pointer-events-none" />
@@ -905,7 +951,7 @@ export function CinematicProjector({
                 {isRevealed && (
                   <motion.div
                     initial={{ height: 0 }}
-                    animate={{ height: `${Math.min(Math.max(score, 5), 100)}%` }}
+                    animate={{ height: `${score > 0 ? Math.min(Math.max(score, 4), 100) : 0}%` }}
                     transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
                     className="w-full rounded-t-xl relative shadow-sm"
                     style={{ backgroundColor: dept.color }}
@@ -1005,7 +1051,7 @@ export function CinematicProjector({
                 : { opacity: 0 }
             }
             className={`fixed inset-0 flex items-center justify-center pointer-events-none transform-gpu ${
-              isFullscreen ? "z-50" : "z-30"
+              isFullscreen ? "z-50" : "z-15"
             }`}
             style={{
               transform: "translate3d(0,0,0)",
@@ -1044,7 +1090,7 @@ export function CinematicProjector({
                 className={`object-contain transition-all duration-300 transform-gpu ${
                   isFullscreen
                     ? "w-[92vw] max-w-[850px] max-h-[68vh] drop-shadow-2xl"
-                    : "w-[300px] h-[160px] drop-shadow-md"
+                    : "w-[240px] h-[120px] drop-shadow-md"
                 }`}
                 style={{
                   transform: "translate3d(0,0,0)",

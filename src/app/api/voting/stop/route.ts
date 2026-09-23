@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   // 1. Verify admin token
   const authHeader = req.headers.get("authorization") ?? "";

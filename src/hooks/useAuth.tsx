@@ -15,7 +15,7 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
-import { getDoc } from "firebase/firestore";
+import { getDoc, onSnapshot } from "firebase/firestore";
 import { auth } from "@/lib/firebase/client";
 import {
   studentRef,
@@ -95,18 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const adminFlag = isAdminToken(tokenResult);
-      const organizerFlag = isOrganizerToken(tokenResult);
+      const adminFlag = isAdminToken(tokenResult) || isOrganizerToken(tokenResult);
       setIsAdmin(adminFlag);
-      setIsOrganizer(organizerFlag);
+      setIsOrganizer(false);
 
       if (adminFlag) {
         setStatus("admin");
-        return;
-      }
-
-      if (organizerFlag) {
-        setStatus("organizer");
         return;
       }
 
@@ -227,6 +221,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [loadConfig]
   );
+
+  // Real-time synchronization of global AppConfig (eventOpen gate, activeEventId, registrationOpen, etc.)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      configAppRef(),
+      (snap) => {
+        if (snap.exists()) {
+          const cfg = snap.data();
+          configCacheRef.current = cfg;
+          setConfig(cfg);
+        }
+      },
+      (err) => {
+        console.warn("[AuthProvider] Live config sync error:", err);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, resolveStatus);

@@ -13,7 +13,7 @@ import {
   Star,
   Trophy,
   Shield,
-  Sliders,
+  Tv,
   Sparkles,
   ArrowRight,
   Radio,
@@ -61,7 +61,6 @@ export default function LandingPage() {
   useEffect(() => {
     if (status === "ready") router.replace("/vote");
     if (status === "admin") router.replace("/admin");
-    if (status === "organizer") router.replace("/organizer/dashboard");
   }, [status, router]);
 
   const festName = config?.festName ?? "Euphoria 2026";
@@ -91,21 +90,6 @@ export default function LandingPage() {
           {/* Quick Nav Links */}
           <nav className="flex items-center gap-1.5 sm:gap-2.5 shrink-0" aria-label="Main Navigation">
             <Link
-              href="/organizer/login"
-              className="tap-scale inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border px-2.5 sm:px-3 py-2 text-xs font-bold transition hover:bg-amber-50/70 hover:border-amber-200"
-              style={{
-                borderColor: "var(--border)",
-                color: "#B45309",
-                background: "var(--surface)",
-                minHeight: "40px",
-              }}
-              title="Organizer Console"
-            >
-              <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 shrink-0" />
-              <span className="hidden xs:inline">Organizer</span>
-            </Link>
-
-            <Link
               href="/admin/login"
               className="tap-scale inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border px-2.5 sm:px-3 py-2 text-xs font-bold transition hover:bg-purple-50/70 hover:border-purple-200"
               style={{
@@ -122,7 +106,7 @@ export default function LandingPage() {
 
             {user ? (
               <Link
-                href={status === "admin" ? "/admin" : status === "organizer" ? "/organizer/dashboard" : "/student/dashboard"}
+                href={status === "admin" ? "/admin" : "/student/dashboard"}
                 className="tap-scale inline-flex items-center gap-1 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:opacity-95"
                 style={{ background: "var(--gradient-hero)", minHeight: "40px" }}
               >
@@ -322,7 +306,7 @@ export default function LandingPage() {
           </ol>
         </section>
 
-        {/* Quick Admin & Organizer Links Banner */}
+        {/* Quick Admin & Projector Links Banner */}
         <section
           className="rounded-3xl p-6 sm:p-8 border relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6"
           style={{
@@ -337,25 +321,27 @@ export default function LandingPage() {
           <div className="space-y-2 text-center md:text-left max-w-xl">
             <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs sm:text-sm font-bold text-amber-800 bg-amber-100">
               <CalendarCheck className="h-4 w-4 text-amber-600" />
-              <span>Event Coordinator &amp; Staff Console</span>
+              <span>Festival Administration &amp; Stage Hub</span>
             </div>
             <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
               Need to coordinate live acts or configure event settings?
             </h3>
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-              Authorized stage managers and fest administrators have dedicated consoles for timing countdowns, categories, and student ratings directories.
+              Authorized fest administrators have dedicated consoles for timing countdowns, categories, student ratings, and auditorium projection.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full sm:w-auto">
-            <Link
-              href="/organizer/login"
+            <a
+              href="/projector/timer"
+              target="_blank"
+              rel="noopener noreferrer"
               className="tap-scale flex items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-5 py-3 text-sm font-bold text-amber-800 hover:bg-amber-50 shadow-xs transition"
               style={{ minHeight: "48px" }}
             >
-              <Sliders className="h-4 w-4 text-amber-600 shrink-0" />
-              <span>Organizer Sign-In</span>
-            </Link>
+              <Tv className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>Timer Projector ↗</span>
+            </a>
             <Link
               href="/admin/login"
               className="tap-scale flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-sm hover:opacity-95 transition"
@@ -395,10 +381,6 @@ export default function LandingPage() {
             <span className="text-slate-300">·</span>
             <Link href="/login" className="hover:text-primary transition-colors font-medium">
               Student Login
-            </Link>
-            <span className="text-slate-300">·</span>
-            <Link href="/organizer/login" className="hover:text-primary font-bold text-amber-700 transition-colors">
-              Stage Organizer
             </Link>
             <span className="text-slate-300">·</span>
             <Link href="/admin/login" className="font-bold text-purple-700 hover:text-purple-900 transition-colors">

@@ -1,43 +1,25 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { useAppConfig } from "@/hooks/useData";
-import { CinematicProjector } from "@/components/organizer/CinematicProjector";
-import { normalizeProjectionSetId, type ProjectionSetId } from "@/config/projection";
+import { useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { PageSkeleton } from "@/components/common/PageSkeleton";
 
-function ResultsPresentation() {
-  const { config } = useAppConfig();
+function RedirectToProjectorResults() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
-  const urlSet = searchParams.get("set");
-  const forcedSetId: ProjectionSetId | undefined = urlSet
-    ? normalizeProjectionSetId(urlSet)
-    : undefined;
+  useEffect(() => {
+    const query = searchParams.toString();
+    router.replace(`/projector/results${query ? `?${query}` : ""}`);
+  }, [router, searchParams]);
 
-  const urlTest = searchParams.get("test");
-  const forcedTestMode: boolean | undefined =
-    urlTest !== null ? urlTest === "true" : undefined;
-
-  const eventId = config?.activeEventId ?? null;
-
-  return (
-    <CinematicProjector
-      eventId={eventId}
-      forcedSetId={forcedSetId}
-      forcedTestMode={forcedTestMode}
-    />
-  );
+  return <PageSkeleton />;
 }
 
-export default function ResultsProjectorPage() {
+export default function OrganizerResultsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="w-screen h-screen bg-white flex items-center justify-center select-none" />
-      }
-    >
-      <ResultsPresentation />
+    <Suspense fallback={<PageSkeleton />}>
+      <RedirectToProjectorResults />
     </Suspense>
   );
 }

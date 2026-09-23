@@ -35,7 +35,7 @@ export default function NotEligiblePage() {
             {config?.allowedEmailDomains.length
               ? `Eligible domains: ${config.allowedEmailDomains.map((d) => `@${d}`).join(", ")}.`
               : ""}
-            {" "}If you believe this is a mistake, contact the organizers.
+            {" "}If you believe this is a mistake, contact festival administration.
           </p>
           <button
             onClick={signOutUser}

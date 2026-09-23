@@ -167,9 +167,9 @@ export default function AdminLoginPage() {
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col gap-2.5 text-center text-xs text-slate-500">
             <div>
-              Looking for stage management?{" "}
-              <a href="/organizer/login" className="font-semibold text-amber-700 hover:underline">
-                Organizer Console →
+              Looking for stage countdown?{" "}
+              <a href="/projector/timer" className="font-semibold text-amber-700 hover:underline">
+                Timer Projector →
               </a>
             </div>
             <div>

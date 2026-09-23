@@ -66,8 +66,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * OrganizerGuard — protects /organizer/dashboard.
- * Organizers and Admins can access.
+ * OrganizerGuard — legacy guard alias, directs to /admin/login.
  */
 export function OrganizerGuard({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
@@ -75,13 +74,13 @@ export function OrganizerGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (status === "loading") return;
-    if (status !== "organizer" && status !== "admin") {
-      router.replace("/organizer/login");
+    if (status !== "admin") {
+      router.replace("/admin/login");
     }
   }, [status, router]);
 
   if (status === "loading") return <PageSkeleton />;
-  if (status !== "organizer" && status !== "admin") return null;
+  if (status !== "admin") return null;
 
   return <>{children}</>;
 }

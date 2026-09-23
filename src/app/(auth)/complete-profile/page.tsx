@@ -89,7 +89,7 @@ function CompleteProfileForm() {
     } catch (err: unknown) {
       const msg =
         err instanceof Error && err.message.includes("permission-denied")
-          ? "This Student ID may already be registered, or registration has closed. Contact the organizers."
+          ? "This Student ID may already be registered, or registration has closed. Contact festival administration."
           : "Couldn't save your profile. Please try again.";
       setServerError(msg);
     } finally {

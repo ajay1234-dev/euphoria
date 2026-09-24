@@ -16,11 +16,11 @@ export function Logo({ festName = "Euphoria", className, size = "md" }: LogoProp
   return (
     <span
       className={cn(
-        "font-display font-bold tracking-tight",
+        "font-display tracking-tight uppercase select-none",
         sizes[size],
         className
       )}
-      style={{ fontFamily: "var(--font-bricolage)", color: "var(--primary)" }}
+      style={{ fontFamily: "var(--font-anton), sans-serif", color: "var(--color-primary)" }}
     >
       {festName}
     </span>

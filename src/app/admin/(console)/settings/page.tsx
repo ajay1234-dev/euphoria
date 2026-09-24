@@ -335,10 +335,10 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+        <h1 className="font-heading text-2xl tracking-wide uppercase text-[#2C1B6B]">
           Festival Settings & Configuration
         </h1>
-        <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+        <p className="text-xs sm:text-sm text-[#5B5470]">
           Global fest branding, campus email rules, and administrative access
         </p>
       </div>

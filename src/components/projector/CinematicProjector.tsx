@@ -441,6 +441,8 @@ export function CinematicProjector({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSeqIdRef = useRef<string | null>(null);
   const isPausedRef = useRef<boolean>(false);
+  const runNextStepRef = useRef<(stepIndex: number) => void>(() => {});
+  const currentStepIndexRef = useRef<number>(0);
 
   // Idle cursor auto-hide after 2.5s
   const [cursorHidden, setCursorHidden] = useState<boolean>(false);
@@ -554,48 +556,22 @@ export function CinematicProjector({
       const rank = act.rank;
 
       setActiveStepIndex(stepIndex);
+      currentStepIndexRef.current = stepIndex;
       const anchors = getColumnAnchors(act.departmentId, act.id);
 
-      // ── TOP 3 PODIUM RANKS (3rd, 2nd, 1st place): VIDEO PLAYS FIRST! ──
-      if (rank <= 3) {
-        const videoAssets = getVideoForRank(activeSetId, rank as 1 | 2 | 3);
-        const stageLabel: ProjectionStage =
-          rank === 3 ? "Third Place" : rank === 2 ? "Second Place" : "First Place";
-        const playingStage: ProjectionStage =
-          rank === 3
-            ? "Playing Third Video"
-            : rank === 2
-            ? "Playing Second Video"
-            : "Playing First Video";
+      const stageLabel: ProjectionStage =
+        rank === 3
+          ? "Third Place"
+          : rank === 2
+          ? "Second Place"
+          : rank === 1
+          ? "First Place"
+          : "Revealing Department";
 
-        reportProgress(stageLabel, dept.shortName, rank, stepIndex + 1);
-
-        // Launch celebration video FIRST in enlarged / fullscreen mode
-        timerRef.current = setTimeout(() => {
-          reportProgress(playingStage, dept.shortName, rank, stepIndex + 1);
-
-          setVideosByRank((prev) => ({
-            ...prev,
-            [rank]: {
-              rank: rank as 1 | 2 | 3,
-              departmentId: act.departmentId,
-              state: "VIDEO_FULLSCREEN_PLAYING",
-              videoSrc: videoAssets.src,
-              fallbackSrc: videoAssets.fallback,
-              targetX: anchors.targetX,
-              targetY: anchors.targetY,
-            },
-          }));
-        }, 400);
-
-        return;
-      }
-
-      // ── NON-PODIUM RANKS (Ranks > 3): Standard Title -> Move -> Bar Growth ──
-      reportProgress("Revealing Department", dept.shortName, rank, stepIndex + 1);
+      reportProgress(stageLabel, dept.shortName, rank, stepIndex + 1);
       playPresentationChime(rank, total);
 
-      // Title alone appears huge in center of projector
+      // Title appears huge in center of projector with full-screen department color background
       setActiveLabelDept({
         id: act.departmentId,
         name: dept.name,
@@ -607,18 +583,47 @@ export function CinematicProjector({
       });
       setLabelPhase("CENTER");
 
-      // Hold briefly (~1.2s), then the EXACT SAME visual text element shrinks and moves to bar
+      // Hold briefly (~1.2s), then the visual text element shrinks and moves to bar
       timerRef.current = setTimeout(() => {
         setLabelPhase("MOVING_TO_BAR");
 
-        // Once label arrives at bar column (~750ms), vertical bar and percentage grow
+        // Once label arrives at bar column (~750ms):
         timerRef.current = setTimeout(() => {
-          setRevealedIndices((prev) => (prev.includes(stepIndex) ? prev : [...prev, stepIndex]));
           setLabelPhase("NONE");
+
+          // ── TOP 3 PODIUM RANKS (3rd, 2nd, 1st place): CELEBRATION VIDEO PLAYS NOW! ──
+          if (rank <= 3) {
+            const videoAssets = getVideoForRank(activeSetId, rank as 1 | 2 | 3);
+            const playingStage: ProjectionStage =
+              rank === 3
+                ? "Playing Third Video"
+                : rank === 2
+                ? "Playing Second Video"
+                : "Playing First Video";
+
+            reportProgress(playingStage, dept.shortName, rank, stepIndex + 1);
+
+            setVideosByRank((prev) => ({
+              ...prev,
+              [rank]: {
+                rank: rank as 1 | 2 | 3,
+                departmentId: act.departmentId,
+                state: "VIDEO_FULLSCREEN_PLAYING",
+                videoSrc: videoAssets.src,
+                fallbackSrc: videoAssets.fallback,
+                targetX: anchors.targetX,
+                targetY: anchors.targetY,
+              },
+            }));
+            return;
+          }
+
+          // ── NON-PODIUM RANKS (Ranks > 3): Vertical bar and percentage grow ──
+          setRevealedIndices((prev) => (prev.includes(stepIndex) ? prev : [...prev, stepIndex]));
 
           // Let bar and percentage counter reach final value (~1500ms), hold briefly (~800ms), advance
           timerRef.current = setTimeout(() => {
-            runNextStep(stepIndex + 1);
+            runNextStepRef.current(stepIndex + 1);
           }, 2300);
         }, 750);
       }, 1200);
@@ -626,9 +631,14 @@ export function CinematicProjector({
     [revealOrderActs, resolveDept, getColumnAnchors, activeSetId, reportProgress]
   );
 
+  useEffect(() => {
+    runNextStepRef.current = runNextStep;
+  }, [runNextStep]);
+
   // ── Video Event Handler (Triggered ONLY when celebration video ends) ─────
   const handleVideoEnded = useCallback(
     (rank: 1 | 2 | 3) => {
+      const stepIdx = currentStepIndexRef.current;
       const movingStage: ProjectionStage =
         rank === 3
           ? "Moving Third Video"
@@ -639,7 +649,7 @@ export function CinematicProjector({
       const act = revealOrderActs.find((a) => a.rank === rank);
       const dept = act ? resolveDept(act.departmentId, (act as any).name || (act as any).title) : null;
 
-      reportProgress(movingStage, dept?.shortName ?? null, rank, activeStepIndex + 1);
+      reportProgress(movingStage, dept?.shortName ?? null, rank, stepIdx + 1);
 
       // Step 1: Transition VIDEO_FULLSCREEN_PLAYING -> VIDEO_SHRINKING
       setVideosByRank((prev) => {
@@ -679,17 +689,17 @@ export function CinematicProjector({
             if (rank === 1) {
               setShowConfetti(true);
             }
-            setRevealedIndices((prev) => (prev.includes(activeStepIndex) ? prev : [...prev, activeStepIndex]));
+            setRevealedIndices((prev) => (prev.includes(stepIdx) ? prev : [...prev, stepIdx]));
           }
 
           // Let bar and percentage complete, then advance to final results
           timerRef.current = setTimeout(() => {
-            runNextStep(activeStepIndex + 1);
+            runNextStepRef.current(stepIdx + 1);
           }, rank === 1 ? 5500 : 2000);
         }, 850);
       }, 500);
     },
-    [revealOrderActs, resolveDept, activeStepIndex, reportProgress, runNextStep]
+    [revealOrderActs, resolveDept, reportProgress]
   );
 
 
@@ -824,7 +834,7 @@ export function CinematicProjector({
 
         {/* Subtle audio enablement prompt if user hasn't clicked window yet */}
         {!audioUnlocked && (
-          <div className="text-slate-300 text-xs font-mono tracking-widest uppercase animate-pulse select-none">
+          <div className="text-slate-400 text-xs font-mono tracking-widest uppercase animate-pulse select-none">
             Click anywhere to prime audio
           </div>
         )}
@@ -834,7 +844,7 @@ export function CinematicProjector({
 
   return (
     <div
-      className={`w-screen h-screen bg-white text-slate-900 flex flex-col justify-end p-6 sm:p-10 select-none overflow-hidden relative ${
+      className={`w-screen h-screen bg-white text-[#1C1533] flex flex-col justify-end p-6 sm:p-10 select-none overflow-hidden relative ${
         cursorHidden ? "cursor-none" : ""
       }`}
     >
@@ -853,6 +863,26 @@ export function CinematicProjector({
         })}
       </div>
 
+      {/* ── Dynamic Full-Screen Department Background Overlay ── */}
+      <AnimatePresence>
+        {labelPhase !== "NONE" && activeLabelDept && (
+          <motion.div
+            key={`dept-bg-overlay-${activeLabelDept.id}`}
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: labelPhase === "CENTER" ? 1 : 0,
+            }}
+            transition={{
+              duration: labelPhase === "CENTER" ? 0.35 : 0.75,
+              ease: [0.16, 1, 0.3, 1],
+            }}
+            exit={{ opacity: 0, transition: { duration: 0.3 } }}
+            className="fixed inset-0 z-30 pointer-events-none"
+            style={{ backgroundColor: activeLabelDept.color }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── Auditorium Top Header Title (Dance Championship, etc.) ── */}
       <motion.div
         initial={{ opacity: 0, y: -24 }}
@@ -860,19 +890,18 @@ export function CinematicProjector({
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="absolute top-6 sm:top-8 inset-x-0 flex flex-col items-center justify-center text-center pointer-events-none z-20 px-4"
       >
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-50/90 backdrop-blur-md border border-purple-200/80 shadow-xs mb-2">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 border border-slate-200/90 shadow-sm mb-2">
           <i className="bi bi-trophy-fill text-amber-500 text-sm" />
-          <span className="text-xs sm:text-sm font-black tracking-widest uppercase text-purple-900">
+          <span className="font-heading text-xs sm:text-sm tracking-widest uppercase text-slate-800 font-bold">
             Euphoria 2026
           </span>
-          <span className="text-purple-300 font-bold">·</span>
-          <span className="text-xs sm:text-sm font-extrabold text-purple-700">
+          <span className="text-slate-300 font-bold">·</span>
+          <span className="text-xs sm:text-sm font-bold text-violet-600">
             {activeSetId === "set1" ? "Dance Stage" : activeSetConfig.discipline}
           </span>
         </div>
         <h1
-          className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight"
-          style={{ fontFamily: "var(--font-bricolage)" }}
+          className="font-heading text-3xl sm:text-5xl md:text-6xl text-[#1C1533] tracking-tight font-extrabold drop-shadow-xs"
         >
           {activeSetId === "set1"
             ? "Dance Performance Results"
@@ -923,14 +952,14 @@ export function CinematicProjector({
                       initial={{ opacity: 0, y: 10, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ delay: 0.1, duration: 0.4 }}
-                      className="inline-flex items-center justify-center px-3 py-1 rounded-2xl bg-white shadow-xl border-2 tabular-nums"
+                      className="inline-flex items-center justify-center px-3.5 py-1 rounded-2xl bg-white shadow-lg border-2 tabular-nums"
                       style={{
                         borderColor: dept.color,
-                        boxShadow: `0 8px 24px -4px ${dept.color}40`,
+                        boxShadow: `0 6px 20px -2px ${dept.color}35`,
                       }}
                     >
                       <span
-                        className="text-lg sm:text-2xl md:text-3xl font-mono font-black tracking-tight drop-shadow-xs"
+                        className="text-lg sm:text-2xl md:text-3xl font-heading font-bold tracking-tight drop-shadow-xs"
                         style={{ color: dept.color }}
                       >
                         <AnimatedPercentageCounter value={score} duration={1400} />
@@ -941,11 +970,11 @@ export function CinematicProjector({
               </div>
 
               {/* Strictly Vertical Bar Container */}
-              <div className="w-12 sm:w-16 md:w-20 h-[48vh] bg-slate-100 rounded-t-2xl flex flex-col justify-end p-1 relative overflow-hidden border border-slate-200/80">
+              <div className="w-12 sm:w-16 md:w-20 h-[48vh] bg-slate-100 rounded-t-2xl flex flex-col justify-end p-1 relative overflow-hidden border border-slate-200/90 shadow-inner">
                 {/* Visual bar baseline guides */}
-                <div className="absolute inset-x-0 bottom-1/4 border-b border-dashed border-slate-200/80 pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-2/4 border-b border-dashed border-slate-200/80 pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-3/4 border-b border-dashed border-slate-200/80 pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-1/4 border-b border-dashed border-slate-300/60 pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-2/4 border-b border-dashed border-slate-300/60 pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-3/4 border-b border-dashed border-slate-300/60 pointer-events-none" />
 
                 {/* The Rising Vertical Bar (0% -> Actual percentage) */}
                 {isRevealed && (
@@ -953,11 +982,11 @@ export function CinematicProjector({
                     initial={{ height: 0 }}
                     animate={{ height: `${score > 0 ? Math.min(Math.max(score, 4), 100) : 0}%` }}
                     transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="w-full rounded-t-xl relative shadow-sm"
+                    className="w-full rounded-t-xl relative shadow-md"
                     style={{ backgroundColor: dept.color }}
                   >
                     {/* Subtle top specular shine */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/30 rounded-t-xl" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/35 rounded-t-xl" />
                   </motion.div>
                 )}
               </div>
@@ -965,7 +994,7 @@ export function CinematicProjector({
               {/* Department Baseline Label: Clean and Professional Title Alone */}
               <div className="w-full text-center mt-3 pt-2 border-t border-slate-200">
                 <div
-                  className="text-base sm:text-2xl font-black tracking-tight leading-tight"
+                  className="font-heading text-lg sm:text-2xl font-bold tracking-wide leading-tight"
                   style={{ color: dept.color }}
                 >
                   {dept.shortName}
@@ -984,7 +1013,13 @@ export function CinematicProjector({
             initial={{ opacity: 0, scale: 0.65, x: 0, y: 0 }}
             animate={
               labelPhase === "CENTER"
-                ? { opacity: 1, scale: 1, x: 0, y: 0 }
+                ? {
+                    opacity: 1,
+                    scale: 1,
+                    x: 0,
+                    y: 0,
+                    transition: { duration: 0.45, ease: "easeOut" },
+                  }
                 : {
                     opacity: 1,
                     scale: 0.28,
@@ -997,12 +1032,16 @@ export function CinematicProjector({
             className="fixed inset-0 pointer-events-none flex flex-col items-center justify-center z-40"
           >
             <div className="flex flex-col items-center text-center">
-              <span
-                className="text-7xl sm:text-8xl md:text-9xl font-black tracking-tighter"
-                style={{ color: activeLabelDept.color }}
+              <motion.span
+                initial={{ color: "#FFFFFF" }}
+                animate={{
+                  color: labelPhase === "CENTER" ? "#FFFFFF" : activeLabelDept.color,
+                }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                className="font-heading text-7xl sm:text-8xl md:text-9xl tracking-normal drop-shadow-[0_8px_32px_rgba(0,0,0,0.45)] font-black uppercase"
               >
                 {activeLabelDept.shortName}
-              </span>
+              </motion.span>
             </div>
           </motion.div>
         )}

@@ -29,12 +29,12 @@ export const PERFORMANCE_PRESET_IMAGES = [
   {
     category: "boys-dance",
     label: "🕺 Boys Dance",
-    url: "https://images.unsplash.com/photo-1547153760-18fc86324498?auto=format&fit=crop&w=800&q=80",
+    url: "https://images.unsplash.com/photo-1609602726003-77a7bf096919?auto=format&fit=crop&w=800&q=80",
   },
   {
     category: "girls-dance",
     label: "💃 Girls Dance",
-    url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80",
+    url: "https://images.unsplash.com/photo-1764014792668-bc484714744f?auto=format&fit=crop&w=800&q=80",
   },
   {
     category: "boys-singing",
@@ -57,14 +57,14 @@ export function getCategoryPresetImage(slug?: string, name?: string): string {
   const s = (slug || "").toLowerCase();
   const n = (name || "").toLowerCase();
 
-  if (s.includes("boys-dance") || (n.includes("boy") && n.includes("dance"))) {
-    return "https://images.unsplash.com/photo-1547153760-18fc86324498?auto=format&fit=crop&w=800&q=80";
+  if (s.includes("boys-dance") || (n.includes("boy") && n.includes("dance")) || s.includes("western-dance")) {
+    return "https://images.unsplash.com/photo-1609602726003-77a7bf096919?auto=format&fit=crop&w=800&q=80";
   }
-  if (s.includes("girls-dance") || (n.includes("girl") && n.includes("dance"))) {
-    return "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80";
+  if (s.includes("girls-dance") || (n.includes("girl") && n.includes("dance")) || s.includes("classical-dance")) {
+    return "https://images.unsplash.com/photo-1764014792668-bc484714744f?auto=format&fit=crop&w=800&q=80";
   }
   if (s.includes("dance") || n.includes("dance")) {
-    return "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80";
+    return "https://images.unsplash.com/photo-1764014792668-bc484714744f?auto=format&fit=crop&w=800&q=80";
   }
   if (s.includes("boys-sing") || (n.includes("boy") && (n.includes("sing") || n.includes("vocal")))) {
     return "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80";

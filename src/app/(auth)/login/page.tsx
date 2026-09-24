@@ -155,15 +155,15 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <Logo festName={festName} size="md" />
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700">
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-semibold bg-[#FEF0D9] text-[#D48006] border border-[#F2960B]/30">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Cultural Fest 2026</span>
           </div>
-          <h1 className="mt-2 text-2xl sm:text-3xl font-bold" style={{ color: "var(--ink)" }}>
+          <h1 className="mt-2 font-heading text-2xl sm:text-3xl text-[#2C1B6B] tracking-wide">
             Welcome Back
           </h1>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500">
-            Log in using your registered MSEC Google account.
+          <p className="mt-1 text-xs sm:text-sm text-[#5B5470]">
+            Sign in with your registered college Google account.
           </p>
         </div>
 
@@ -206,7 +206,7 @@ export default function LoginPage() {
                   You haven&apos;t registered for the cultural fest yet.
                 </h3>
                 <p className="mt-1 text-xs text-amber-800 leading-relaxed">
-                  We couldn&apos;t find a festival profile for this college Google account. Complete your student registration to rate &amp; like performances.
+                  We couldn&apos;t find a festival profile for this college Google account. Complete your student registration to participate and rate acts on stage.
                 </p>
               </div>
 

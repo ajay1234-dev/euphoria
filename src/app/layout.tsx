@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Bricolage_Grotesque } from "next/font/google";
+import { Plus_Jakarta_Sans, Anton } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "@/components/ui/sonner";
@@ -11,11 +11,11 @@ const jakarta = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin", "latin-ext"],
+const anton = Anton({
+  subsets: ["latin"],
   display: "swap",
-  variable: "--font-bricolage",
-  weight: ["400", "600", "700", "800"],
+  variable: "--font-anton",
+  weight: ["400"],
 });
 
 export const metadata: Metadata = {
@@ -40,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${bricolage.variable}`}>
+    <html lang="en" className={`${jakarta.variable} ${anton.variable}`}>
       <body>
         <a href="#main-content" className="skip-link">
           Skip to main content

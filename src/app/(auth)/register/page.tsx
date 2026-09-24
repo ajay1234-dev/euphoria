@@ -334,18 +334,18 @@ export default function RegisterPage() {
         {/* Header Branding */}
         <div className="mb-6 text-center">
           <Logo festName={festName} size="md" />
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700">
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-semibold bg-[#FEF0D9] text-[#D48006] border border-[#F2960B]/30">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Cultural Fest 2026</span>
           </div>
-          <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="mt-2 font-heading text-2xl sm:text-3xl tracking-wide text-[#2C1B6B]">
             Student Registration
           </h1>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500">
-            {step === "auth" && "Use your official MSEC Google account to register."}
+          <p className="mt-1 text-xs sm:text-sm text-[#5B5470]">
+            {step === "auth" && "Sign in with your official college Google account to register."}
             {step === "details" && "Confirm your details to complete festival registration."}
             {step === "confirm" && "Review and confirm your official student registration."}
-            {step === "success" && "Your festival registration is complete!"}
+            {step === "success" && "Your festival registration is verified and complete!"}
           </p>
         </div>
 
@@ -388,7 +388,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <h2 className="text-xl font-black text-slate-900" style={{ fontFamily: "var(--font-bricolage)" }}>
+                <h2 className="font-heading text-xl text-[#2C1B6B]">
                   Registration is Currently Closed
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">

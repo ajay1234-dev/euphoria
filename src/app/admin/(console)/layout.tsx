@@ -79,12 +79,11 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       >
         <div className="mb-6">
           <span
-            className="text-lg font-bold"
-            style={{ fontFamily: "var(--font-bricolage)", color: "var(--primary)" }}
+            className="font-heading text-xl tracking-wider uppercase text-[#2C1B6B]"
           >
             {config?.festName ?? "Euphoria"}
           </span>
-          <p className="text-xs font-medium mt-0.5" style={{ color: "var(--ink-muted)" }}>
+          <p className="text-xs font-semibold mt-0.5 text-[#5B5470]">
             Admin Console
           </p>
         </div>
@@ -126,14 +125,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       >
         <div className="mb-6 flex items-center justify-between">
           <span
-            className="text-lg font-bold"
-            style={{ fontFamily: "var(--font-bricolage)", color: "var(--primary)" }}
+            className="font-heading text-xl tracking-wider uppercase text-[#2C1B6B]"
           >
             {config?.festName ?? "Euphoria"}
           </span>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1 rounded-lg"
+            className="p-1 rounded-lg cursor-pointer"
             aria-label="Close navigation"
             style={{ color: "var(--ink-muted)" }}
           >

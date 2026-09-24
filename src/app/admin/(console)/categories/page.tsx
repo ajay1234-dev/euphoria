@@ -177,14 +177,14 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+          <h1 className="font-heading text-2xl tracking-wide uppercase text-[#2C1B6B]">
             Competition Categories
           </h1>
-          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+          <p className="text-xs sm:text-sm text-[#5B5470]">
             Contest categories (e.g., Western Dance, Solo Vocals, Street Play)
           </p>
         </div>
-        <Button onClick={openCreateDialog} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold">
+        <Button onClick={openCreateDialog} className="flex items-center gap-2 font-bold cursor-pointer">
           <i className="bi bi-plus-lg text-sm" /> Add Category
         </Button>
       </div>

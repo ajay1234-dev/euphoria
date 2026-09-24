@@ -56,12 +56,11 @@ function StudentDashboardContent() {
       >
         <div className="flex items-center gap-3">
           <span
-            className="text-lg font-bold tracking-tight"
-            style={{ fontFamily: "var(--font-bricolage)", color: "var(--primary)" }}
+            className="font-heading text-xl tracking-wide uppercase text-[#2C1B6B]"
           >
             {festName}
           </span>
-          <span className="hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700">
+          <span className="hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#FEF0D9] text-[#D48006] border border-[#F2960B]/30">
             <i className="bi bi-stars text-xs" />
             Student Portal
           </span>
@@ -72,10 +71,10 @@ function StudentDashboardContent() {
           <button
             type="button"
             onClick={() => setProfileModalOpen(true)}
-            className="tap-scale inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-purple-200 bg-purple-50/80 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-purple-700 transition hover:bg-purple-100 shadow-xs cursor-pointer"
+            className="tap-scale inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-[#E8DFC8] bg-[#FFFBF3] px-2.5 sm:px-3 py-1.5 text-xs font-bold text-[#2C1B6B] transition hover:bg-[#FEF0D9] shadow-xs cursor-pointer"
             title="View Student Profile"
           >
-            <i className="bi bi-person-circle text-purple-600 text-xs" />
+            <i className="bi bi-person-circle text-[#2C1B6B] text-xs" />
             <span>Profile</span>
           </button>
 
@@ -84,7 +83,7 @@ function StudentDashboardContent() {
             className="tap-scale inline-flex items-center gap-1 sm:gap-1.5 rounded-xl px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95"
             style={{ background: "var(--gradient-hero)" }}
           >
-            <i className="bi bi-star-fill text-amber-300 text-xs" />
+            <i className="bi bi-star-fill text-[#FFC94A] text-xs" />
             <span>Vote</span>
           </Link>
 
@@ -105,14 +104,11 @@ function StudentDashboardContent() {
         {/* Welcome Greeting */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="space-y-1">
-            <h1
-              className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight"
-              style={{ fontFamily: "var(--font-bricolage)" }}
-            >
+            <h1 className="font-heading text-2xl sm:text-3xl text-[#2C1B6B] tracking-tight">
               Welcome, {name} 👋
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500">
-              Here is your verified festival registration and live act access.
+            <p className="text-xs sm:text-sm text-[#5B5470]">
+              Here is your verified festival registration and live stage access.
             </p>
           </div>
 
@@ -120,9 +116,9 @@ function StudentDashboardContent() {
             variant="outline"
             size="sm"
             onClick={() => setProfileModalOpen(true)}
-            className="self-start sm:self-auto flex items-center gap-1.5 border-purple-200 bg-purple-50/50 text-purple-700 hover:bg-purple-100 text-xs font-bold rounded-xl h-9"
+            className="self-start sm:self-auto flex items-center gap-1.5 border-[#E8DFC8] bg-white text-[#2C1B6B] hover:bg-[#FFFBF3] text-xs font-bold rounded-xl h-9"
           >
-            <i className="bi bi-shield-check text-purple-600 text-sm" />
+            <i className="bi bi-shield-check text-[#F2960B] text-sm" />
             <span>View Student ID Pass</span>
           </Button>
         </div>
@@ -134,22 +130,21 @@ function StudentDashboardContent() {
         >
           <div className="relative z-10 space-y-4 max-w-lg">
             <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold bg-white/20 backdrop-blur-md text-white">
-              <i className="bi bi-star-fill text-amber-300 text-xs" />
-              People&apos;s Choice Live Rating &amp; Likes
+              <i className="bi bi-star-fill text-[#FFC94A] text-xs" />
+              People&apos;s Choice Live Rating
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold leading-snug">
-              Ready to rate and like festival stage performances?
+            <h2 className="font-heading text-2xl sm:text-3xl font-normal leading-snug tracking-wide">
+              Ready to rate festival stage acts?
             </h2>
             <p className="text-xs sm:text-sm text-white/90 leading-relaxed">
-              When an act goes live on stage, real-time rating &amp; liking opens on your phone. Rate each act with 1–5 stars to crown the winner!
+              When an act goes live on stage, real-time star rating opens on your phone. Rate each act with 1 to 5 stars to help crown the champion!
             </p>
             <div>
               <Link
                 href="/vote"
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-bold shadow-md transition hover:bg-slate-50 active:scale-95"
-                style={{ color: "var(--primary)" }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-bold shadow-md transition hover:bg-[#FFFBF3] active:scale-95 text-[#2C1B6B]"
               >
-                <span>Go to Live Rating Arena</span>
+                <span>Open Rating Arena</span>
                 <i className="bi bi-arrow-right text-sm" />
               </Link>
             </div>
@@ -158,30 +153,25 @@ function StudentDashboardContent() {
 
         {/* Dedicated Separate Area: Student Profile Quick Access Card */}
         <div
-          className="rounded-2xl border p-4 sm:p-5 shadow-sm transition hover:shadow-md cursor-pointer"
+          className="rounded-2xl border border-[#E8DFC8] bg-white p-4 sm:p-5 shadow-xs transition hover:shadow-md cursor-pointer"
           onClick={() => setProfileModalOpen(true)}
-          style={{
-            background: "var(--surface)",
-            borderColor: "var(--border)",
-          }}
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-bold text-white shadow-sm text-lg"
-                style={{ background: "var(--gradient-hero)" }}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-heading text-white shadow-xs text-xl bg-[#2C1B6B]"
               >
                 {name.charAt(0).toUpperCase()}
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-slate-900">{name}</h3>
+                  <h3 className="font-heading text-base text-[#2C1B6B]">{name}</h3>
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold bg-emerald-100 text-emerald-800">
                     <i className="bi bi-check-circle-fill text-emerald-600 text-xs" /> Verified
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-mono">
-                  <span>Reg: <strong className="text-slate-800">{registerNumber}</strong></span>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#5B5470] font-mono tabular-nums">
+                  <span>Reg: <strong className="text-[#1A1230]">{registerNumber}</strong></span>
                   <span>•</span>
                   <span>{departmentName}</span>
                   <span>•</span>
@@ -190,7 +180,7 @@ function StudentDashboardContent() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs font-bold text-primary sm:self-center">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#F2960B] sm:self-center">
               <span>View Full Student Profile</span>
               <i className="bi bi-chevron-right text-xs" />
             </div>
@@ -199,28 +189,22 @@ function StudentDashboardContent() {
 
         {/* Festival Lineup Preview */}
         <div
-          className="rounded-3xl border p-6 sm:p-7 shadow-sm"
-          style={{
-            background: "var(--surface)",
-            borderColor: "var(--border)",
-            boxShadow: "var(--shadow-card)",
-          }}
+          className="rounded-3xl border border-[#E8DFC8] bg-white p-6 sm:p-7 shadow-xs"
         >
-          <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#F0E4CE]">
             <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <i className="bi bi-music-note-beamed text-primary text-sm" />
+              <h3 className="font-heading text-lg text-[#2C1B6B] flex items-center gap-2">
+                <i className="bi bi-music-note-beamed text-[#F2960B] text-sm" />
                 <span>Festival Cultural Acts</span>
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#5B5470]">
                 {event ? `${event.name} — Schedule & Performances` : "Official Event Lineup"}
               </p>
             </div>
 
             <Link
               href="/vote"
-              className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-              style={{ color: "var(--primary)" }}
+              className="text-xs font-bold text-[#F2960B] hover:underline flex items-center gap-1"
             >
               <span>View In Arena</span>
               <i className="bi bi-arrow-right text-xs" />
@@ -243,17 +227,17 @@ function StudentDashboardContent() {
                 return (
                   <li
                     key={perf.id}
-                    className="flex items-center justify-between p-3.5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition"
+                    className="flex items-center justify-between p-3.5 rounded-2xl border border-[#F0E4CE] bg-[#FFFBF3] hover:bg-[#FEF0D9]/30 transition"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 text-xs font-bold">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[#FEF0D9] text-[#D48006] text-xs font-heading font-bold">
                         {index + 1}
                       </span>
                       <div className="min-w-0">
-                        <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                        <p className="font-heading text-xs sm:text-sm text-[#2C1B6B] truncate">
                           {perf.name}
                         </p>
-                        <p className="text-[11px] text-slate-500 truncate">
+                        <p className="text-[11px] text-[#5B5470] truncate">
                           {perfCat?.name || "General Act"}
                         </p>
                       </div>
@@ -278,31 +262,40 @@ function StudentDashboardContent() {
       {/* ── SEPARATE STUDENT PROFILE DIALOG / MODAL ── */}
       <Dialog open={profileModalOpen} onOpenChange={setProfileModalOpen}>
         <DialogContent className="max-w-md p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
-          {/* Header Banner */}
+          {/* Header Banner - Radiant Festival Sunset Gradient */}
           <div
-            className="p-6 text-white relative overflow-hidden"
-            style={{ background: "var(--gradient-hero)" }}
+            className="p-6 text-white relative overflow-hidden bg-gradient-to-r from-[#F2960B] via-[#E85D04] to-[#D6266E]"
           >
-            <div className="flex items-center justify-between">
-              <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-white/20 backdrop-blur-md text-white">
-                <i className="bi bi-stars text-xs" />
+            {/* Ambient festival glow circles */}
+            <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/15 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-black/10 rounded-full blur-xl pointer-events-none" />
+
+            <div className="flex items-center justify-between pr-10 relative z-10">
+              <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold bg-black/25 backdrop-blur-md text-white border border-white/20 shadow-xs">
+                <i className="bi bi-stars text-xs text-[#FFC94A]" />
                 <span>{config?.festName ?? "Euphoria 2026"} Official ID</span>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-400/90 text-emerald-950">
-                <i className="bi bi-check-circle-fill text-xs" /> Verified
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold bg-white text-emerald-800 shadow-sm">
+                <i className="bi bi-check-circle-fill text-xs text-emerald-600" /> Verified
               </span>
             </div>
 
-            <div className="mt-4 flex items-center gap-3.5">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-purple-700 font-extrabold text-2xl shadow-md">
+            <div className="mt-5 flex items-center gap-4 relative z-10">
+              <div className="flex h-15 w-15 shrink-0 items-center justify-center rounded-2xl bg-white text-[#2C1B6B] font-heading text-2xl shadow-lg border-2 border-white/60">
                 {name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <DialogTitle className="text-xl font-extrabold text-white leading-tight">
+              <div className="space-y-0.5">
+                <DialogTitle
+                  className="font-heading text-2xl !text-white leading-tight tracking-wide drop-shadow-xs"
+                  style={{ color: "#ffffff" }}
+                >
                   {name}
                 </DialogTitle>
-                <DialogDescription className="text-xs text-white/80 mt-0.5 font-mono">
-                  {registerNumber}
+                <DialogDescription
+                  className="text-xs !text-amber-100 font-mono tabular-nums font-semibold tracking-wider"
+                  style={{ color: "rgba(254, 243, 199, 0.95)" }}
+                >
+                  Reg. #{registerNumber}
                 </DialogDescription>
               </div>
             </div>
@@ -311,47 +304,47 @@ function StudentDashboardContent() {
           {/* Detailed Credentials */}
           <div className="p-6 space-y-4 bg-white">
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                <span className="text-slate-400 font-medium flex items-center gap-1">
-                  <i className="bi bi-hash text-purple-600 text-sm" /> Register Number
+              <div className="p-3 rounded-2xl bg-[#FFFBF3] border border-[#F0E4CE] space-y-1">
+                <span className="text-[#5B5470] font-medium flex items-center gap-1">
+                  <i className="bi bi-hash text-[#2C1B6B] text-sm" /> Register Number
                 </span>
-                <p className="font-mono font-bold text-slate-900 text-sm">{registerNumber}</p>
+                <p className="font-mono tabular-nums font-bold text-[#1A1230] text-sm">{registerNumber}</p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                <span className="text-slate-400 font-medium flex items-center gap-1">
-                  <i className="bi bi-calendar-event text-purple-600 text-sm" /> Academic Year
+              <div className="p-3 rounded-2xl bg-[#FFFBF3] border border-[#F0E4CE] space-y-1">
+                <span className="text-[#5B5470] font-medium flex items-center gap-1">
+                  <i className="bi bi-calendar-event text-[#2C1B6B] text-sm" /> Academic Year
                 </span>
-                <p className="font-bold text-slate-900 text-sm">{formatYearLabel(year)}</p>
+                <p className="font-bold text-[#1A1230] text-sm">{formatYearLabel(year)}</p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                <span className="text-slate-400 font-medium flex items-center gap-1">
-                  <i className="bi bi-diagram-3 text-purple-600 text-sm" /> Department
+              <div className="p-3 rounded-2xl bg-[#FFFBF3] border border-[#F0E4CE] space-y-1">
+                <span className="text-[#5B5470] font-medium flex items-center gap-1">
+                  <i className="bi bi-diagram-3 text-[#2C1B6B] text-sm" /> Department
                 </span>
-                <p className="font-bold text-slate-900 text-xs truncate">{departmentName}</p>
+                <p className="font-bold text-[#1A1230] text-xs truncate">{departmentName}</p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                <span className="text-slate-400 font-medium flex items-center gap-1">
-                  <i className="bi bi-layers text-purple-600 text-sm" /> Section
+              <div className="p-3 rounded-2xl bg-[#FFFBF3] border border-[#F0E4CE] space-y-1">
+                <span className="text-[#5B5470] font-medium flex items-center gap-1">
+                  <i className="bi bi-layers text-[#2C1B6B] text-sm" /> Section
                 </span>
-                <p className="font-bold text-slate-900 text-sm">Section {section}</p>
+                <p className="font-bold text-[#1A1230] text-sm">Section {section}</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-              <span className="text-slate-400 font-medium flex items-center gap-1 text-xs">
-                <i className="bi bi-envelope-fill text-purple-600 text-sm" /> Official College Email
+            <div className="p-3 rounded-2xl bg-[#FFFBF3] border border-[#F0E4CE] space-y-1">
+              <span className="text-[#5B5470] font-medium flex items-center gap-1 text-xs">
+                <i className="bi bi-envelope-fill text-[#2C1B6B] text-sm" /> Official College Email
               </span>
-              <p className="font-mono text-xs font-semibold text-slate-800 break-all">{email}</p>
+              <p className="font-mono text-xs font-semibold text-[#1A1230] break-all">{email}</p>
             </div>
 
             {/* Immutability Notice */}
-            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-purple-50/60 border border-purple-100 text-[11px] text-purple-900">
-              <i className="bi bi-lock-fill text-purple-600 shrink-0 mt-0.5 text-sm" />
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-[#FEF0D9]/60 border border-[#F2960B]/30 text-[11px] text-[#2C1B6B]">
+              <i className="bi bi-lock-fill text-[#D48006] shrink-0 mt-0.5 text-sm" />
               <span>
-                Your festival profile is cryptographically locked to your college Google account. For any corrections, contact the event admin.
+                Your festival profile is cryptographically verified to your college Google account. For any corrections, contact the event admin.
               </span>
             </div>
 

@@ -219,10 +219,10 @@ export default function AdminProjectionPage() {
               <i className="bi bi-projector" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-bricolage)", color: "var(--ink)" }}>
+              <h1 className="font-heading text-2xl tracking-wide uppercase text-[#2C1B6B]">
                 Projection Command Center
               </h1>
-              <p className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>
+              <p className="text-xs sm:text-sm font-medium text-[#5B5470]">
                 Auditorium vertical results reveal, video playback sync & stage orchestration
               </p>
             </div>

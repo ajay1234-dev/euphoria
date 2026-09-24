@@ -53,11 +53,11 @@ type PerformanceWithId = Performance & { id: string };
 const PRESET_IMAGES = [
   {
     label: "🕺 Boys Dance",
-    url: "https://images.unsplash.com/photo-1547153760-18fc86324498?auto=format&fit=crop&w=800&q=80",
+    url: "https://images.unsplash.com/photo-1609602726003-77a7bf096919?auto=format&fit=crop&w=800&q=80",
   },
   {
     label: "💃 Girls Dance",
-    url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80",
+    url: "https://images.unsplash.com/photo-1764014792668-bc484714744f?auto=format&fit=crop&w=800&q=80",
   },
   {
     label: "🎤 Boys Singing",
@@ -189,12 +189,12 @@ export default function PerformancesPage() {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated as admin");
       await startPerformanceVoting(eventId, perf.id, votingDuration, idToken);
-      toast.success(`Live rating & likes opened for "${perf.name}" (${votingDuration}s)!`);
+      toast.success(`Voting started for "${perf.name}" (${votingDuration}s)`);
       setLaunchPerfTarget(null);
       fetchPerfs();
     } catch (err: unknown) {
       console.error(err);
-      toast.error(err instanceof Error ? err.message : "Failed to start live rating");
+      toast.error(err instanceof Error ? err.message : "Failed to start live voting");
     } finally {
       setStageActing(false);
     }
@@ -207,8 +207,9 @@ export default function PerformancesPage() {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated");
       const agg = await stopPerformanceVoting(eventId, activeId, idToken);
+      const activePerfObj = performances.find((p) => p.id === activeId);
       toast.success(
-        `Rating Finalized! ${agg.totalVotes} ratings · Score: ${agg.percentageScore.toFixed(1)}% (${agg.averageRating.toFixed(2)}★)`
+        `Voting closed for "${activePerfObj?.name ?? "Act"}" (${agg.totalVotes} ratings · Avg: ${agg.averageRating.toFixed(2)}★ · ${agg.percentageScore.toFixed(1)}%)`
       );
       setShowStopDialog(false);
       fetchPerfs();
@@ -269,7 +270,7 @@ export default function PerformancesPage() {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated");
       await extendPerformanceVoting(eventId, extraSeconds, idToken);
-      toast.success(`Timer extended by +${extraSeconds}s!`);
+      toast.success(`Timer extended by ${extraSeconds}s`);
     } catch (err: unknown) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Failed to extend timer");
@@ -285,7 +286,7 @@ export default function PerformancesPage() {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated");
       await resetStageState(eventId, idToken);
-      toast.success("Stage successfully reset to idle.");
+      toast.info("Stage reset to standby");
       setShowResetDialog(false);
       fetchPerfs();
     } catch (err: unknown) {

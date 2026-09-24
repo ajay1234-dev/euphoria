@@ -25,6 +25,7 @@ import {
 import { signInWithGooglePopup } from "@/lib/firebase/auth-google";
 import { isAdminToken, isOrganizerToken } from "@/lib/auth/claims";
 import { checkEmailEligibility } from "@/lib/auth/eligibility";
+import { DEPT_CODE_TO_SHORT_CODE } from "@/config/departments";
 import type { AuthStatus } from "@/lib/auth/resolveRoute";
 import type { UserProfile, StudentProfile, AppConfig } from "@/types/firestore";
 
@@ -135,7 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             section: sData.section,
             departmentCode: sData.departmentCode,
             department: sData.department,
-            departmentId: `dept-${sData.departmentCode}`,
+            departmentId: sData.departmentCode && DEPT_CODE_TO_SHORT_CODE[sData.departmentCode]
+              ? `dept-${DEPT_CODE_TO_SHORT_CODE[sData.departmentCode].toLowerCase()}`
+              : `dept-${sData.departmentCode}`,
             role: sData.role,
             registrationStatus: sData.registrationStatus,
             emailVerified: true,
@@ -197,7 +200,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 section: sData.section,
                 departmentCode: sData.departmentCode,
                 department: sData.department,
-                departmentId: `dept-${sData.departmentCode}`,
+                departmentId: sData.departmentCode && DEPT_CODE_TO_SHORT_CODE[sData.departmentCode]
+                  ? `dept-${DEPT_CODE_TO_SHORT_CODE[sData.departmentCode].toLowerCase()}`
+                  : `dept-${sData.departmentCode}`,
                 role: sData.role,
                 registrationStatus: sData.registrationStatus,
                 emailVerified: true,

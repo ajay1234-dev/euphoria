@@ -178,10 +178,10 @@ export default function StudentsPage() {
       {/* Top Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="font-heading text-2xl tracking-wide uppercase text-[#2C1B6B]">
             Student Management
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-[#5B5470]">
             Verified student profiles, department/year distributions, and CSV directory export
           </p>
         </div>
@@ -238,7 +238,7 @@ export default function StudentsPage() {
               {loadingStats ? "…" : stats.registered}
             </div>
             <p className="text-xs text-emerald-600/80 mt-1">
-              Verified identity eligible for live rating &amp; likes
+              Verified identity eligible for live stage voting
             </p>
           </CardContent>
         </Card>

@@ -359,12 +359,6 @@ export const WarpText: React.FC<WarpTextProps> = ({
 
     let renderer: any;
     let gl: any;
-    let program: any;
-    let geometry: any;
-    let mesh: any;
-    let texture: any;
-    let resizeObserver: ResizeObserver;
-    let intersectionObserver: IntersectionObserver;
     let raf = 0;
     let disposed = false;
     let contextLost = false;
@@ -424,7 +418,7 @@ export const WarpText: React.FC<WarpTextProps> = ({
       props: propsRef.current,
     });
 
-    texture = new Texture(gl, {
+    const texture = new Texture(gl, {
       image: initialTextCanvas,
       generateMipmaps: false,
       minFilter: gl.LINEAR,
@@ -433,8 +427,8 @@ export const WarpText: React.FC<WarpTextProps> = ({
       wrapT: gl.CLAMP_TO_EDGE,
     });
 
-    geometry = new Triangle(gl);
-    program = new Program(gl, {
+    const geometry = new Triangle(gl);
+    const program = new Program(gl, {
       vertex,
       fragment,
       transparent: true,
@@ -456,7 +450,7 @@ export const WarpText: React.FC<WarpTextProps> = ({
         uMotion: { value: reduceMotion ? 0 : 1 },
       },
     });
-    mesh = new Mesh(gl, { geometry, program });
+    const mesh = new Mesh(gl, { geometry, program });
 
     renderer.setSize(initW, initH);
 
@@ -575,10 +569,10 @@ export const WarpText: React.FC<WarpTextProps> = ({
       raf = requestAnimationFrame(loop);
     };
 
-    resizeObserver = new ResizeObserver(resize);
+    const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
 
-    intersectionObserver = new IntersectionObserver(
+    const intersectionObserver = new IntersectionObserver(
       ([entry]) => {
         visible = entry.isIntersecting;
         if (visible && pageVisible && !raf) raf = requestAnimationFrame(loop);

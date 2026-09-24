@@ -1,27 +1,46 @@
 import { cn } from "@/lib/utils";
 
-type StatusVariant = "success" | "warning" | "error" | "info" | "default";
+export type StatusVariant =
+  | "live"
+  | "scheduled"
+  | "completed"
+  | "skipped"
+  | "verified"
+  | "success"
+  | "warning"
+  | "error"
+  | "info"
+  | "default";
 
 interface StatusBadgeProps {
   label: string;
   variant?: StatusVariant;
   className?: string;
+  pulse?: boolean;
 }
 
 const variantStyles: Record<StatusVariant, { bg: string; text: string; border: string }> = {
-  success: { bg: "var(--success-soft)", text: "var(--success)", border: "var(--success)" },
-  warning: { bg: "var(--warning-soft)", text: "var(--warning)", border: "var(--warning)" },
-  error: { bg: "var(--error-soft)", text: "var(--error)", border: "var(--error)" },
-  info: { bg: "var(--primary-soft)", text: "var(--primary)", border: "var(--primary)" },
-  default: { bg: "var(--surface-alt)", text: "var(--ink-muted)", border: "var(--border)" },
+  live: { bg: "#FCE7F0", text: "#D6266E", border: "#F9A8D4" },
+  scheduled: { bg: "#F1E8FF", text: "#2C1B6B", border: "#DDD6FE" },
+  completed: { bg: "#DFF3E6", text: "#146C43", border: "#BBF7D0" },
+  skipped: { bg: "#F3F4F6", text: "#6B7280", border: "#E5E7EB" },
+  verified: { bg: "#DFF3E6", text: "#146C43", border: "#BBF7D0" },
+  success: { bg: "var(--color-success-soft)", text: "var(--color-success)", border: "var(--color-success)" },
+  warning: { bg: "var(--color-warning-soft)", text: "var(--color-warning)", border: "var(--color-warning)" },
+  error: { bg: "var(--color-error-soft)", text: "var(--color-error)", border: "var(--color-error)" },
+  info: { bg: "var(--color-primary-soft)", text: "var(--color-primary-strong)", border: "var(--color-primary)" },
+  default: { bg: "var(--color-surface-muted)", text: "var(--color-ink-muted)", border: "var(--color-border)" },
 };
 
-export function StatusBadge({ label, variant = "default", className }: StatusBadgeProps) {
-  const styles = variantStyles[variant];
+export function StatusBadge({ label, variant = "default", className, pulse }: StatusBadgeProps) {
+  const isLive = variant === "live" || pulse;
+  const isVerified = variant === "verified";
+  const styles = variantStyles[variant] || variantStyles.default;
+
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide",
         className
       )}
       style={{
@@ -31,7 +50,16 @@ export function StatusBadge({ label, variant = "default", className }: StatusBad
       }}
       aria-label={label}
     >
-      {label}
+      {isLive && (
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D6266E] opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D6266E]" />
+        </span>
+      )}
+      {isVerified && (
+        <span className="text-xs font-bold leading-none" aria-hidden="true">✓</span>
+      )}
+      <span>{label}</span>
     </span>
   );
 }

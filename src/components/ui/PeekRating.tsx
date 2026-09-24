@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -135,9 +135,6 @@ export default function PeekRating({
     paint();
     onPreview?.(index === null ? null : index + 1);
   };
-  const setHoverRef = useRef(setHover);
-  setHoverRef.current = setHover;
-
   const measure = () => {
     const row = rowRef.current;
     if (!row) return;
@@ -260,7 +257,7 @@ export default function PeekRating({
     const reset = () => {
       st.current.pressing = false;
       st.current.pointerId = null;
-      setHoverRef.current(null);
+      setHover(null);
     };
     const onVisibility = () => {
       if (document.hidden) reset();

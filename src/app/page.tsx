@@ -5,52 +5,44 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { FestBackground } from "@/components/common/FestBackground";
-import { Pennants } from "@/components/common/Pennants";
 import { Logo } from "@/components/common/Logo";
 import { Confetti } from "@/components/common/Confetti";
-import GradientWaves from "@/components/common/GradientWaves";
 import {
-  Star,
   Trophy,
   Shield,
   Tv,
-  Sparkles,
-  ArrowRight,
   Radio,
   Lock,
   UserCheck,
   CalendarCheck,
   CheckCircle2,
-  Zap,
+  Sparkles,
 } from "lucide-react";
 
-const HOW_IT_WORKS = [
+const STEPS = [
   {
-    step: "01",
-    badge: "Student Verification",
-    icon: <UserCheck className="h-6 w-6 text-purple-600" />,
-    iconBg: "bg-purple-50 border-purple-100",
-    title: "Instant Google Verification",
+    step: "1",
+    badge: "Official Verification",
+    icon: <UserCheck className="h-6 w-6 text-[#2C1B6B]" />,
+    title: "Official College Sign-in",
     description:
-      "Sign in securely with your official college Google email. Your 12-digit register number and engineering department are automatically verified in one tap.",
+      "Sign in securely with your @msec.edu.in or @student.msec.edu.in account. Your department, section, and 12-digit register number are verified automatically.",
   },
   {
-    step: "02",
-    badge: "Stage Live Stream",
-    icon: <Radio className="h-6 w-6 text-amber-600" />,
-    iconBg: "bg-amber-50 border-amber-100",
-    title: "Real-Time Live Stage Window",
+    step: "2",
+    badge: "Live Stage Arena",
+    icon: <Radio className="h-6 w-6 text-[#F2960B]" />,
+    title: "Live Stage Countdown",
     description:
-      "As each stage act performs, the countdown clock begins. The live rating and likes arena opens instantly on your mobile screen for audience engagement.",
+      "As each act performs, the live rating window opens directly on your phone with a synchronized stage timer. Keep your screen open during the performance.",
   },
   {
-    step: "03",
-    badge: "Audience Choice",
-    icon: <Trophy className="h-6 w-6 text-emerald-600" />,
-    iconBg: "bg-emerald-50 border-emerald-100",
-    title: "Star Ratings & Tally",
+    step: "3",
+    badge: "People's Choice Rating",
+    icon: <Trophy className="h-6 w-6 text-[#146C43]" />,
+    title: "Rate 1 to 5 Stars",
     description:
-      "Submit your 1 to 5 star rating and likes. Cryptographic Firebase rules guarantee one tamper-proof rating per student to crown the authentic People's Choice Champion.",
+      "Submit your rating from 1 to 5 stars before the stage countdown finishes. Every student gets exactly one verified rating to decide the People's Choice champion.",
   },
 ];
 
@@ -66,66 +58,68 @@ export default function LandingPage() {
   const festName = config?.festName ?? "Euphoria 2026";
 
   return (
-    <div className="min-h-dvh flex flex-col selection:bg-purple-200 selection:text-purple-900" style={{ background: "var(--bg)" }}>
+    <div
+      className="min-h-dvh flex flex-col selection:bg-amber-100 selection:text-[#1C1533]"
+      style={{ background: "var(--color-base)" }}
+    >
       <FestBackground />
       <Confetti duration={4500} />
 
-      {/* Top Navigation Bar — Ultra-Responsive */}
+      {/* Top Navigation Bar */}
       <header
         className="sticky top-0 z-40 border-b backdrop-blur-xl transition-all"
         style={{
-          background: "rgba(255, 255, 255, 0.90)",
-          borderColor: "var(--border)",
+          background: "rgba(255, 251, 243, 0.92)",
+          borderColor: "var(--color-border)",
         }}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:px-6">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Logo festName={festName} size="sm" />
-            <div className="hidden md:flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live Fest Arena
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-3 min-w-0">
+            <Logo festName={festName} size="md" />
+            <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[#DDD6FE] bg-[#F1E8FF] px-2.5 py-0.5 text-xs font-semibold text-[#2C1B6B]">
+              <span className="h-2 w-2 rounded-full bg-[#D6266E] animate-pulse" />
+              <span>Live on Stage</span>
             </div>
           </div>
 
           {/* Quick Nav Links */}
-          <nav className="flex items-center gap-1.5 sm:gap-2.5 shrink-0" aria-label="Main Navigation">
+          <nav className="flex items-center gap-2 sm:gap-3 shrink-0" aria-label="Main Navigation">
             <Link
               href="/admin/login"
-              className="tap-scale inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border px-2.5 sm:px-3 py-2 text-xs font-bold transition hover:bg-purple-50/70 hover:border-purple-200"
+              className="tap-scale inline-flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-xs font-semibold transition hover:bg-[#FBF1E0]"
               style={{
-                borderColor: "var(--border)",
-                color: "#6B21A8",
-                background: "var(--surface)",
+                borderColor: "var(--color-border)",
+                color: "var(--color-ink)",
+                background: "var(--color-surface)",
                 minHeight: "40px",
               }}
               title="Admin Console"
             >
-              <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-600 shrink-0" />
-              <span className="hidden xs:inline">Admin</span>
+              <Shield className="h-4 w-4 text-[#2C1B6B] shrink-0" />
+              <span>Admin</span>
             </Link>
 
             {user ? (
               <Link
                 href={status === "admin" ? "/admin" : "/student/dashboard"}
-                className="tap-scale inline-flex items-center gap-1 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:opacity-95"
-                style={{ background: "var(--gradient-hero)", minHeight: "40px" }}
+                className="tap-scale inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs transition hover:opacity-95"
+                style={{ background: "var(--color-secondary)", minHeight: "40px" }}
               >
-                <span>Portal</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                <span>Festival Portal</span>
               </Link>
             ) : (
-              <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="tap-scale rounded-xl px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-bold text-slate-700 transition hover:bg-slate-100"
+                  className="tap-scale rounded-2xl px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#1C1533] transition hover:bg-[#FBF1E0]"
                   style={{ minHeight: "40px", display: "inline-flex", alignItems: "center" }}
                 >
-                  Log in
+                  Sign in
                 </Link>
                 <Link
                   href="/register"
-                  className="tap-scale rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:opacity-95"
-                  style={{ background: "var(--gradient-hero)", minHeight: "40px", display: "inline-flex", alignItems: "center" }}
+                  className="tap-scale rounded-2xl px-4 py-2 text-xs sm:text-sm font-bold text-[#1C1533] shadow-xs transition hover:bg-[#D48006]"
+                  style={{ background: "var(--color-primary)", minHeight: "40px", display: "inline-flex", alignItems: "center" }}
                 >
                   Register
                 </Link>
@@ -135,256 +129,217 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section — Crafted Festival Atmosphere */}
+      {/* Hero Section — Poster Concept (Section 3) */}
       <section
-        className="relative flex flex-col items-center overflow-hidden px-4 pb-10 sm:pb-14 pt-8 sm:pt-12 text-center"
-        style={{ background: "var(--gradient-hero)" }}
-        aria-label="Festival Hero"
+        className="relative flex flex-col items-center justify-center px-4 pt-12 pb-14 sm:pt-16 sm:pb-20 text-center overflow-hidden border-b"
+        style={{
+          background: "linear-gradient(180deg, #FFFBF3 0%, #FBF1E0 100%)",
+          borderColor: "var(--color-border)",
+        }}
+        aria-label="Festival Poster Hero"
       >
-        {/* Dynamic 3D WebGL GradientWaves from React Bits */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-60 z-0">
-          <GradientWaves
-            horizonColor="#1E1B4B"
-            waveColor="#7C3AED"
-            crestColor="#F472B6"
-            speed={0.35}
-            amplitude={2.2}
-            waveScale={0.65}
-            waveRatio={0.85}
-            swell={30}
-            turbulence={18}
-            tilt={1.15}
-            zoom={1.05}
-            height={5.2}
-            fogDepth={18}
-            detail="low"
-            brightness={1.0}
-            opacity={0.85}
-            mouseInteraction={true}
-            parallaxStrength={0.4}
-            grain={true}
-            grainIntensity={0.035}
-          />
-        </div>
+        <div className="max-w-3xl mx-auto flex flex-col items-center space-y-5">
+          {/* Institution Header Tag */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#F0E4CE] bg-white px-4 py-1.5 text-xs sm:text-sm font-semibold text-[#5B5470] shadow-xs">
+            <Sparkles className="h-3.5 w-3.5 text-[#F2960B]" />
+            <span>Meenakshi Sundararajan Engineering College, Chennai</span>
+          </div>
 
-        <Pennants className="absolute top-0 left-0 right-0 h-10 sm:h-14 w-full opacity-90 pointer-events-none z-10" />
+          {/* Marquee Anton Wordmark */}
+          <div className="py-2">
+            <h1
+              className="text-6xl xs:text-7xl sm:text-8xl md:text-9xl font-black uppercase tracking-tight text-[#1C1533] leading-none"
+              style={{ fontFamily: "var(--font-anton), sans-serif" }}
+            >
+              {festName}
+            </h1>
+          </div>
 
-        {/* Ambient backdrop glow */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-25 z-0"
-          style={{
-            background: "radial-gradient(circle at 50% 30%, rgba(254, 240, 138, 0.2) 0%, transparent 60%)",
-          }}
-        />
+          {/* One-Line Descriptive Tagline */}
+          <p className="text-lg sm:text-xl font-medium text-[#5B5470] max-w-xl mx-auto leading-relaxed">
+            Annual College Cultural Fest · Official People&apos;s Choice Live Rating
+          </p>
 
-        {/* Decorative Festive Sparkle Tag */}
-        <div className="relative z-10 mb-3 sm:mb-4 inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-3.5 sm:px-4 py-1.5 text-xs sm:text-sm font-bold text-white backdrop-blur-md shadow-sm">
-          <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-spin-slow" />
-          <span className="tracking-wide uppercase">Meenakshi Sundararajan Engineering College</span>
-        </div>
+          {/* Call-to-Action Buttons */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full max-w-md mx-auto">
+            <Link
+              href="/register"
+              className="tap-scale inline-flex h-13 w-full sm:w-auto items-center justify-center gap-2 rounded-2xl px-7 text-base font-bold shadow-xs transition hover:bg-[#D48006]"
+              style={{
+                background: "var(--color-primary)",
+                color: "#1C1533",
+                minHeight: "52px",
+              }}
+            >
+              <UserCheck className="h-5 w-5 shrink-0" />
+              <span>Register to Rate Acts</span>
+            </Link>
 
-        {/* Festival Title — Instant High-Performance Gradient Text */}
-        <div className="relative z-10 w-full max-w-4xl px-2 flex flex-col items-center">
-          <h1
-            className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-pink-200 drop-shadow-md py-2 leading-[1.08] text-center"
-            style={{ fontFamily: "var(--font-bricolage), sans-serif" }}
-          >
-            {festName}
-          </h1>
+            <Link
+              href="/login"
+              className="tap-scale inline-flex h-13 w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border bg-white px-7 text-base font-semibold text-[#1C1533] shadow-xs transition hover:bg-[#FBF1E0]"
+              style={{
+                borderColor: "var(--color-border)",
+                minHeight: "52px",
+              }}
+            >
+              <span>Student Sign-in</span>
+            </Link>
+          </div>
 
-          <p className="mt-1 sm:mt-2 text-base sm:text-lg md:text-xl font-medium text-white/95 leading-relaxed max-w-2xl mx-auto drop-shadow-xs">
-            The Official People&apos;s Choice Performance Rating &amp; Liking App.
-            Every student gets one verified live rating to crown the champion act.
+          {/* Genuine Fest Fact Banner */}
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-[#2C1B6B]">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#DDD6FE] bg-[#F1E8FF] px-3.5 py-1">
+              <span className="h-2 w-2 rounded-full bg-[#146C43]" />
+              <span>7 Engineering Departments · Live on Stage Tonight</span>
+            </span>
+          </div>
+
+          {/* Official Email Requirement Notice */}
+          <p className="text-xs text-[#5B5470] flex items-center justify-center gap-1.5 pt-1">
+            <Lock className="h-3.5 w-3.5 shrink-0 text-[#F2960B]" />
+            <span>Sign in with your official @msec.edu.in or @student.msec.edu.in account</span>
           </p>
         </div>
-
-        {/* Key Festival Pillars / Stat Badges — Instant 0ms display */}
-        <div className="relative z-10 mt-5 flex flex-wrap items-center justify-center gap-2.5 max-w-2xl text-xs sm:text-sm font-semibold text-white/95">
-          <span className="glass-pill rounded-full px-3.5 py-1.5 flex items-center gap-1.5 shadow-xs">
-            <CheckCircle2 className="h-4 w-4 text-emerald-300 shrink-0" />
-            <span>Verified MSEC Students</span>
-          </span>
-          <span className="glass-pill rounded-full px-3.5 py-1.5 flex items-center gap-1.5 shadow-xs">
-            <Zap className="h-4 w-4 text-amber-300 shrink-0" />
-            <span>Instant Live Star Rating &amp; Likes</span>
-          </span>
-          <span className="glass-pill rounded-full px-3.5 py-1.5 flex items-center gap-1.5 shadow-xs">
-            <Lock className="h-4 w-4 text-purple-200 shrink-0" />
-            <span>Single Cryptographic Rating</span>
-          </span>
-        </div>
-
-        {/* Hero Call-to-Action Buttons — 100% Mobile Responsive & Instantly Visible */}
-        <div className="relative z-10 mt-6 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full max-w-xl mx-auto px-2">
-          <Link
-            href="/register"
-            className="tap-scale inline-flex h-13 items-center justify-center gap-2.5 rounded-2xl bg-white px-7 sm:px-8 text-sm sm:text-base font-extrabold shadow-xl transition-all hover:bg-slate-50 hover:shadow-2xl whitespace-nowrap w-full sm:w-auto"
-            style={{ color: "var(--primary)" }}
-          >
-            <UserCheck className="h-5 w-5 text-purple-600 shrink-0" />
-            <span className="whitespace-nowrap">Register Student Account</span>
-          </Link>
-
-          <Link
-            href="/login"
-            className="tap-scale inline-flex h-13 items-center justify-center gap-2 rounded-2xl border border-white/40 bg-white/20 px-7 sm:px-8 text-sm sm:text-base font-bold text-white shadow-md backdrop-blur-md transition-all hover:bg-white/30 whitespace-nowrap w-full sm:w-auto"
-          >
-            <span className="whitespace-nowrap">Student Log In</span>
-            <ArrowRight className="h-4 w-4 shrink-0" />
-          </Link>
-        </div>
-
-        {/* Official College Email Notice */}
-        <p className="relative z-10 mt-5 text-xs sm:text-sm text-white/90 flex items-center justify-center gap-1.5 px-4 font-medium">
-          <Lock className="h-4 w-4 shrink-0 text-amber-300" />
-          <span>Official <strong className="underline underline-offset-2">@student.msec.edu.in</strong> or <strong className="underline underline-offset-2">@msec.edu.in</strong> Google sign-in required</span>
-        </p>
       </section>
 
       {/* Main Content Area */}
-      <main id="main-content" className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 w-full space-y-14 sm:space-y-18">
-        
-        {/* How It Works 3-Step Guide */}
-        <section aria-labelledby="how-heading" className="space-y-8">
-          <div className="text-center space-y-2 max-w-2xl mx-auto">
-            <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-100">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Transparent &amp; Tamper-Proof</span>
-            </div>
+      <main id="main-content" className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 w-full space-y-12">
+        {/* Ordered Onboarding Sequence */}
+        <section aria-labelledby="steps-heading" className="space-y-6">
+          <div className="text-center space-y-2 max-w-xl mx-auto">
             <h2
-              id="how-heading"
-              className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900"
+              id="steps-heading"
+              className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1C1533]"
             >
-              How People&apos;s Choice Rating &amp; Liking Works
+              How People&apos;s Choice Rating Works
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
-              Zero paper ballots. 100% verified student star ratings tallied in real time.
+            <p className="text-sm text-[#5B5470]">
+              Zero paper tokens. Verified student star ratings tallied on stage in real time.
             </p>
           </div>
 
-          <ol className="grid gap-5 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
-            {HOW_IT_WORKS.map((step, i) => (
+          <ol className="grid gap-6 sm:grid-cols-3" role="list">
+            {STEPS.map((s, idx) => (
               <li
-                key={i}
-                className="relative flex flex-col justify-between rounded-3xl p-6 sm:p-7 border bg-white transition-all duration-200 hover:-translate-y-1 hover:shadow-lg group"
+                key={idx}
+                className="relative flex flex-col justify-between rounded-xl p-6 border bg-white shadow-xs transition-colors hover:border-[#D48006]"
                 style={{
-                  borderColor: "var(--border)",
-                  boxShadow: "var(--shadow-card)",
+                  borderColor: "var(--color-border)",
+                  borderRadius: "var(--radius-card)",
                 }}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-5">
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl border shadow-xs transition-transform group-hover:scale-105 ${step.iconBg}`}
-                    >
-                      {step.icon}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FBF1E0] border border-[#F0E4CE]">
+                      {s.icon}
                     </div>
-                    <span className="font-display font-black text-2xl sm:text-3xl text-slate-200 group-hover:text-purple-200 transition-colors tabular-nums">
-                      {step.step}
+                    <span
+                      className="text-2xl font-black text-[#5B5470]/30 tabular-nums"
+                      style={{ fontFamily: "var(--font-anton), sans-serif" }}
+                    >
+                      0{s.step}
                     </span>
                   </div>
 
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-purple-700">
-                    {step.badge}
+                  <span className="inline-block text-xs font-bold text-[#F2960B]">
+                    {s.badge}
                   </span>
 
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 mt-1.5 mb-2">
-                    {step.title}
+                  <h3 className="text-lg font-bold text-[#1C1533]">
+                    {s.title}
                   </h3>
 
-                  <p className="text-sm leading-relaxed text-slate-600">
-                    {step.description}
+                  <p className="text-sm leading-relaxed text-[#5B5470]">
+                    {s.description}
                   </p>
                 </div>
 
-                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-purple-700">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  <span>Verified step {i + 1} of 3</span>
+                <div className="mt-5 pt-3 border-t border-[#F0E4CE] flex items-center gap-1.5 text-xs font-semibold text-[#146C43]">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <span>Verified stage procedure</span>
                 </div>
               </li>
             ))}
           </ol>
         </section>
 
-        {/* Quick Admin & Projector Links Banner */}
+        {/* Stage Administration & Auditorium Projector Display Hub */}
         <section
-          className="rounded-3xl p-6 sm:p-8 border relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6"
+          className="rounded-xl p-6 sm:p-8 border flex flex-col md:flex-row items-center justify-between gap-6"
           style={{
-            background: "linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 100%)",
-            borderColor: "rgba(245, 158, 11, 0.2)",
-            boxShadow: "0 4px 20px -2px rgba(245, 158, 11, 0.12)",
+            background: "var(--color-surface)",
+            borderColor: "var(--color-border)",
+            borderRadius: "var(--radius-card)",
           }}
         >
-          {/* Accent top ribbon */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-purple-500 to-amber-500" />
-
           <div className="space-y-2 text-center md:text-left max-w-xl">
-            <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs sm:text-sm font-bold text-amber-800 bg-amber-100">
-              <CalendarCheck className="h-4 w-4 text-amber-600" />
-              <span>Festival Administration &amp; Stage Hub</span>
+            <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-[#2C1B6B] bg-[#F1E8FF] border border-[#DDD6FE]">
+              <CalendarCheck className="h-4 w-4" />
+              <span>Stage &amp; Auditorium Displays</span>
             </div>
-            <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Need to coordinate live acts or configure event settings?
+            <h3 className="text-xl sm:text-2xl font-bold text-[#1C1533]">
+              Auditorium Screens &amp; Admin Controller
             </h3>
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-              Authorized fest administrators have dedicated consoles for timing countdowns, categories, student ratings, and auditorium projection.
+            <p className="text-sm text-[#5B5470] leading-relaxed">
+              Launch live countdown timers on the confidence monitor, reveal category winner podiums on the LED wall, and control act transitions.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full sm:w-auto">
-            <a
+            <Link
               href="/projector/timer"
               target="_blank"
               rel="noopener noreferrer"
-              className="tap-scale flex items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-5 py-3 text-sm font-bold text-amber-800 hover:bg-amber-50 shadow-xs transition"
-              style={{ minHeight: "48px" }}
+              className="tap-scale flex items-center justify-center gap-2 rounded-2xl border bg-white px-5 py-3 text-sm font-semibold text-[#1C1533] shadow-xs transition hover:bg-[#FBF1E0]"
+              style={{ borderColor: "var(--color-border)", minHeight: "48px" }}
             >
-              <Tv className="h-4 w-4 text-amber-600 shrink-0" />
+              <Tv className="h-4 w-4 text-[#F2960B] shrink-0" />
               <span>Timer Projector ↗</span>
-            </a>
+            </Link>
+
             <Link
               href="/admin/login"
-              className="tap-scale flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-sm hover:opacity-95 transition"
-              style={{ background: "var(--gradient-hero)", minHeight: "48px" }}
+              className="tap-scale flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold text-white shadow-xs transition hover:opacity-95"
+              style={{ background: "var(--color-secondary)", minHeight: "48px" }}
             >
               <Shield className="h-4 w-4 text-white shrink-0" />
-              <span>Admin Login →</span>
+              <span>Admin Console</span>
             </Link>
           </div>
         </section>
-
       </main>
 
-      {/* Footer — Clean, Accessible, Responsive */}
+      {/* Footer */}
       <footer
         className="mt-auto border-t py-8 text-xs sm:text-sm"
         style={{
-          borderColor: "var(--border)",
-          background: "var(--surface)",
-          color: "var(--ink-muted)",
+          borderColor: "var(--color-border)",
+          background: "var(--color-surface)",
+          color: "var(--color-ink-muted)",
         }}
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
           <div>
-            <p className="font-semibold text-slate-800 text-sm">
-              © 2026 <strong>{festName}</strong> · Meenakshi Sundararajan Engineering College
+            <p className="font-semibold text-[#1C1533]">
+              © 2026 {festName} · Meenakshi Sundararajan Engineering College
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-[#5B5470] mt-1">
               Kodambakkam, Chennai · Autonomous Institution affiliated to Anna University
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-sm">
-            <Link href="/register" className="hover:text-primary transition-colors font-medium">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-sm font-medium">
+            <Link href="/register" className="hover:text-[#F2960B] transition-colors">
               Student Register
             </Link>
-            <span className="text-slate-300">·</span>
-            <Link href="/login" className="hover:text-primary transition-colors font-medium">
-              Student Login
+            <span className="text-[#F0E4CE]">·</span>
+            <Link href="/login" className="hover:text-[#F2960B] transition-colors">
+              Student Sign-in
             </Link>
-            <span className="text-slate-300">·</span>
-            <Link href="/admin/login" className="font-bold text-purple-700 hover:text-purple-900 transition-colors">
-              Administrator
+            <span className="text-[#F0E4CE]">·</span>
+            <Link href="/admin/login" className="font-bold text-[#2C1B6B] hover:underline">
+              Administrator Console
             </Link>
           </div>
         </div>

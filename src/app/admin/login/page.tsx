@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -71,13 +72,10 @@ export default function AdminLoginPage() {
     >
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1
-            className="text-3xl font-bold"
-            style={{ fontFamily: "var(--font-bricolage)", color: "var(--primary)" }}
-          >
+          <h1 className="font-heading text-3xl tracking-wide uppercase text-[#2C1B6B]">
             Administrator Login
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
+          <p className="mt-1 text-sm text-[#5B5470]">
             Central management console for fest administrators
           </p>
         </div>
@@ -168,14 +166,14 @@ export default function AdminLoginPage() {
           <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col gap-2.5 text-center text-xs text-slate-500">
             <div>
               Looking for stage countdown?{" "}
-              <a href="/projector/timer" className="font-semibold text-amber-700 hover:underline">
+              <Link href="/projector/timer" className="font-semibold text-amber-700 hover:underline">
                 Timer Projector →
-              </a>
+              </Link>
             </div>
             <div>
-              <a href="/" className="hover:underline text-slate-400">
+              <Link href="/" className="hover:underline text-slate-400">
                 ← Back to Festival Home
-              </a>
+              </Link>
             </div>
           </div>
         </div>

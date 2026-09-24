@@ -240,23 +240,24 @@ service cloud.firestore {
         match /votes/{studentUid} {
           allow get: if signedIn() && (request.auth.uid == studentUid || isStaff());
           allow list: if isStaff();
-          // Votes are immutable — create only, no updates allowed.
-          // Minimal doc: only studentUid + rating + createdAt (no personal data).
-          // Department block: students may NOT vote for their own department's performance.
-          allow create: if signedIn()
+          // Minimal doc: studentUid + rating + createdAt.
+          // Allows create or update during active open voting window.
+          // Block students from voting for their own department's performance (staff exempted for testing).
+          allow create, update: if signedIn()
                         && request.auth.uid == studentUid
                         && request.resource.data.keys().hasOnly(['studentUid','rating','createdAt'])
                         && request.resource.data.studentUid == studentUid
                         && request.resource.data.rating is int
                         && request.resource.data.rating >= 1
                         && request.resource.data.rating <= 5
-                        && request.resource.data.createdAt == request.time
+                        && (request.resource.data.createdAt == request.time || (resource != null && request.resource.data.createdAt == resource.data.createdAt))
                         && exists(/databases/$(database)/documents/events/$(eventId)/state/current)
                         && get(/databases/$(database)/documents/events/$(eventId)/state/current).data.status == 'open'
                         && get(/databases/$(database)/documents/events/$(eventId)/state/current).data.activePerformanceId == performanceId
                         // Block students from voting for their own department's act
                         && (
-                          !exists(/databases/$(database)/documents/users/$(studentUid))
+                          isStaff()
+                          || !exists(/databases/$(database)/documents/users/$(studentUid))
                           || !exists(/databases/$(database)/documents/events/$(eventId)/performances/$(performanceId))
                           || get(/databases/$(database)/documents/users/$(studentUid)).data.departmentId == null
                           || get(/databases/$(database)/documents/events/$(eventId)/performances/$(performanceId)).data.departmentId != get(/databases/$(database)/documents/users/$(studentUid)).data.departmentId

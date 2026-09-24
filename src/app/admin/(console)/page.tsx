@@ -215,8 +215,9 @@ export default function AdminOverviewPage() {
     try {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated");
+      const targetPerf = performances.find((p) => p.id === selectedPerfId);
       await startPerformanceVoting(eventId, selectedPerfId, duration, idToken);
-      toast.success(`Live voting started for ${duration}s!`);
+      toast.success(`Voting started for "${targetPerf?.name ?? "Act"}" (${duration}s)`);
       setSelectedPerfId("");
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Failed to start live voting");
@@ -234,7 +235,7 @@ export default function AdminOverviewPage() {
       if (!idToken) throw new Error("Not authenticated");
       const tally = await stopPerformanceVoting(eventId, activeId, idToken);
       toast.success(
-        `Rating closed! Finalized with ${tally.totalVotes} ratings (Avg: ${tally.averageRating.toFixed(2)} ★ · ${tally.percentageScore.toFixed(1)}%)`
+        `Voting closed for "${activePerf?.name ?? "Act"}" (${tally.totalVotes} ratings · Avg: ${tally.averageRating.toFixed(2)}★ · ${tally.percentageScore.toFixed(1)}%)`
       );
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Failed to close rating");
@@ -292,7 +293,7 @@ export default function AdminOverviewPage() {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated");
       await extendPerformanceVoting(eventId, 30, idToken);
-      toast.success("Extended rating timer by +30 seconds!");
+      toast.success("Timer extended by 30s");
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Failed to extend timer");
       console.error(err);
@@ -308,7 +309,7 @@ export default function AdminOverviewPage() {
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Not authenticated");
       await resetStageState(eventId, idToken);
-      toast.info("Stage reset to idle state. All ratings are preserved.");
+      toast.info("Stage reset to standby");
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Failed to reset stage");
       console.error(err);
@@ -571,7 +572,7 @@ export default function AdminOverviewPage() {
                       </span>
                     )}
                   </div>
-                  <h4 className="text-xl sm:text-2xl font-black" style={{ color: "var(--ink)", fontFamily: "var(--font-bricolage)" }}>
+                  <h4 className="font-heading text-xl sm:text-2xl text-[#2C1B6B]">
                     {activePerf?.name ?? "Live Act"}
                   </h4>
                   {activePerf?.description && (
@@ -585,15 +586,15 @@ export default function AdminOverviewPage() {
                     Countdown Clock
                   </span>
                   <span
-                    className="font-mono text-5xl sm:text-6xl font-black tabular-nums tracking-tight"
-                    style={{ color: remaining > 10 ? "#7C3AED" : "#DC2626" }}
+                    className="font-heading text-5xl sm:text-6xl tabular-nums tracking-normal"
+                    style={{ color: remaining > 10 ? "#2C1B6B" : "#DC2626" }}
                   >
                     {mins}:{secs}
                   </span>
                   <div className="mt-1 flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-purple-800 border border-purple-100 shadow-xs">
-                      <i className="bi bi-people-fill text-purple-600 text-xs" />
-                      <span>{liveVotes} Ratings &amp; Likes</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-[#2C1B6B] border border-[#E8DFC8] shadow-xs">
+                      <i className="bi bi-people-fill text-[#2C1B6B] text-xs" />
+                      <span>{liveVotes} Ratings</span>
                     </span>
                     {liveVotes > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-amber-700 border border-amber-100 shadow-xs">
@@ -612,11 +613,11 @@ export default function AdminOverviewPage() {
                   variant="destructive"
                   onClick={() => setShowStopDialog(true)}
                   disabled={stageActing}
-                  className="flex-1 min-h-[46px] flex items-center justify-center gap-2 text-sm font-bold shadow-sm"
+                  className="flex-1 min-h-[46px] flex items-center justify-center gap-2 text-sm font-bold shadow-xs cursor-pointer"
                   style={{ background: "#DC2626" }}
                 >
                   <i className="bi bi-stop-fill text-base" />
-                  {stageActing ? "Finalizing Tally…" : "Stop & Finalize Rating Tally"}
+                  {stageActing ? "Finalizing Tally…" : "Stop Voting & Finalize"}
                 </Button>
 
                 <Button
@@ -624,10 +625,10 @@ export default function AdminOverviewPage() {
                   variant="outline"
                   onClick={handleExtendVoting}
                   disabled={stageActing}
-                  className="min-h-[46px] px-4 flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-700 border-amber-300 hover:bg-amber-50"
+                  className="min-h-[46px] px-4 flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#D48006] border-[#F2960B]/40 hover:bg-[#FEF0D9] cursor-pointer"
                 >
-                  <i className="bi bi-plus-circle-fill text-amber-600 text-sm" />
-                  Extend +30s
+                  <i className="bi bi-plus-circle-fill text-[#D48006] text-sm" />
+                  Extend Timer (+30s)
                 </Button>
               </div>
 
@@ -741,13 +742,13 @@ export default function AdminOverviewPage() {
                 type="button"
                 onClick={handleStartVoting}
                 disabled={!selectedPerfId || stageActing || !eventId}
-                className="w-full min-h-[48px] flex items-center justify-center gap-2 text-sm sm:text-base font-bold text-white shadow-md transition hover:opacity-95"
+                className="w-full min-h-[48px] flex items-center justify-center gap-2 text-sm sm:text-base font-bold text-white shadow-md transition hover:opacity-95 cursor-pointer"
                 style={{ background: "#16A34A" }}
               >
                 <i className="bi bi-play-fill text-base" />
                 {stageActing
                   ? "Starting Stage Timer…"
-                  : `Start Live Voting Timer (${customDurationInput ? customDurationInput + "s" : selectedDuration + "s"})`}
+                  : `Start Voting (${customDurationInput ? customDurationInput + "s" : selectedDuration + "s"})`}
               </Button>
             </div>
           )}

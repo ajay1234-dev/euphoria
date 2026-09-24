@@ -128,50 +128,49 @@ export default function StageTimerProjectorPage() {
   const activeCat = activePerf?.categoryId ? catMap[activePerf.categoryId] : null;
 
   return (
-    <div className="min-h-dvh flex flex-col justify-between bg-white text-slate-900 selection:bg-purple-100 selection:text-purple-900 overflow-hidden relative font-sans">
-      {/* Subtle ambient background glow for high-contrast auditorium projection */}
+    <div className="min-h-dvh flex flex-col justify-between bg-gradient-to-b from-[#0B0730] to-[#1F1150] text-white selection:bg-[#F2960B]/30 selection:text-white overflow-hidden relative font-sans">
+      {/* Department Ambient Glow for high-contrast auditorium projection */}
       <div
-        className="pointer-events-none absolute inset-0 z-0 opacity-60"
+        className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-1000"
         style={{
-          background: isOpen
-            ? "radial-gradient(circle at 50% 35%, rgba(124, 58, 237, 0.08) 0%, transparent 65%)"
-            : "radial-gradient(circle at 50% 35%, rgba(245, 158, 11, 0.06) 0%, transparent 65%)",
+          background: activeDept
+            ? `radial-gradient(circle at 50% 40%, ${activeDept.color}35 0%, transparent 70%)`
+            : isOpen
+            ? "radial-gradient(circle at 50% 40%, rgba(242, 150, 11, 0.15) 0%, transparent 70%)"
+            : "radial-gradient(circle at 50% 40%, rgba(124, 58, 237, 0.1) 0%, transparent 70%)",
         }}
       />
 
-      {/* Floating Projector Header (Clean White Auditorium Theme) */}
-      <header className="relative z-20 flex items-center justify-between px-6 py-4 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+      {/* Floating Projector Header (Auditorium Stage Dark Theme) */}
+      <header className="relative z-20 flex items-center justify-between px-6 sm:px-10 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 border border-purple-200 text-purple-600">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 border border-white/15 text-[#FFC94A]">
             <i className="bi bi-broadcast text-lg animate-pulse" />
           </div>
           <div>
-            <span
-              className="text-base sm:text-lg font-black tracking-tight text-slate-900"
-              style={{ fontFamily: "var(--font-bricolage)" }}
-            >
+            <span className="font-heading text-xl sm:text-2xl tracking-wide uppercase text-white">
               {config?.festName ?? "Euphoria 2026"}
             </span>
-            <span className="hidden sm:inline text-xs text-slate-500 ml-2 font-semibold tracking-wide uppercase">
-              · Stage Timer Projector
+            <span className="hidden sm:inline text-xs text-white/60 ml-2 font-semibold tracking-wider uppercase">
+              · Stage Confidence Monitor
             </span>
           </div>
         </div>
 
         {/* Projector Controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <Link
             href="/projector/results"
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-800 hover:bg-slate-100 transition active:scale-95 shadow-xs"
-            title="Switch to Results Bar Chart view"
+            className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs sm:text-sm font-bold text-white hover:bg-white/20 transition active:scale-95 shadow-sm backdrop-blur-xs"
+            title="Switch to Results Podium"
           >
-            <i className="bi bi-bar-chart-fill text-purple-600 text-sm" />
-            <span>Results Bar Chart ↗</span>
+            <i className="bi bi-trophy-fill text-[#FFC94A] text-sm" />
+            <span>Results Podium ↗</span>
           </Link>
 
           <button
             onClick={toggleFullscreen}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition active:scale-95 shadow-xs"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition active:scale-95 shadow-sm cursor-pointer"
             title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             aria-label="Toggle Fullscreen"
           >
@@ -186,9 +185,9 @@ export default function StageTimerProjectorPage() {
           /* ── ACTIVE LIVE RATING DISPLAY ── */
           <div className="flex flex-col items-center justify-center space-y-6 sm:space-y-8 w-full animate-fade-in">
             {/* Live Rating Status Pill */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 py-2 text-xs sm:text-sm font-black text-emerald-700 shadow-sm">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
-              <span className="tracking-widest uppercase">Live Audience Rating &amp; Likes Open</span>
+            <div className="inline-flex items-center gap-2.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 backdrop-blur-md px-5 py-2 text-xs sm:text-sm font-bold text-emerald-300 shadow-lg">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <span className="tracking-widest uppercase">Live Audience Rating Open</span>
             </div>
 
             {/* Performance Title & Department Metadata */}
@@ -196,28 +195,25 @@ export default function StageTimerProjectorPage() {
               <div className="flex flex-wrap items-center justify-center gap-2.5">
                 {activeDept && (
                   <span
-                    className="rounded-full px-4 py-1 text-xs sm:text-sm font-bold shadow-sm text-white"
+                    className="rounded-full px-5 py-1.5 text-xs sm:text-sm font-bold shadow-md text-white border border-white/20"
                     style={{ backgroundColor: activeDept.color }}
                   >
                     {activeDept.name} ({activeDept.shortName})
                   </span>
                 )}
                 {activeCat && (
-                  <span className="rounded-full bg-purple-50 border border-purple-200 px-3.5 py-1 text-xs sm:text-sm font-semibold text-purple-700">
+                  <span className="rounded-full bg-white/15 border border-white/20 px-4 py-1.5 text-xs sm:text-sm font-semibold text-white/90 backdrop-blur-xs">
                     {activeCat.name}
                   </span>
                 )}
               </div>
 
-              <h1
-                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 drop-shadow-xs"
-                style={{ fontFamily: "var(--font-bricolage)" }}
-              >
+              <h1 className="font-heading text-4xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight text-white drop-shadow-md">
                 {activePerf?.name ?? "Live Act"}
               </h1>
 
               {activePerf?.description && (
-                <p className="text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto font-medium line-clamp-2">
+                <p className="text-sm sm:text-lg text-white/80 max-w-2xl mx-auto font-medium line-clamp-2">
                   {activePerf.description}
                 </p>
               )}
@@ -225,64 +221,65 @@ export default function StageTimerProjectorPage() {
 
             {/* Giant Auditorium Countdown Clock */}
             <div className="py-2 flex flex-col items-center">
-              <div className="rounded-3xl border-2 border-slate-200 bg-white shadow-2xl px-8 sm:px-16 py-4 sm:py-6">
+              <div
+                className={`rounded-3xl border-2 px-8 sm:px-20 py-4 sm:py-6 shadow-2xl backdrop-blur-md transition-all duration-300 ${
+                  remaining <= 10 && remaining > 0
+                    ? "border-red-500/80 bg-red-950/40 timer-critical-pulse"
+                    : "border-white/15 bg-black/40"
+                }`}
+              >
                 <div
-                  className="font-mono text-7xl xs:text-8xl sm:text-9xl md:text-[130px] lg:text-[170px] font-black tabular-nums tracking-tighter transition-all duration-300"
-                  style={{
-                    color: remaining > 10 ? "#0F172A" : "#DC2626",
-                    textShadow:
-                      remaining > 10
-                        ? "0 2px 20px rgba(124, 58, 237, 0.12)"
-                        : "0 2px 25px rgba(220, 38, 38, 0.25)",
-                  }}
+                  className={`font-heading text-8xl sm:text-9xl md:text-[140px] lg:text-[180px] xl:text-[210px] tabular-nums tracking-normal leading-none select-none ${
+                    remaining <= 10 && remaining > 0
+                      ? "text-red-400 drop-shadow-[0_0_35px_rgba(239,68,68,0.7)]"
+                      : "text-white drop-shadow-[0_0_30px_rgba(255,201,74,0.4)]"
+                  }`}
                 >
                   {mins}:{secs}
                 </div>
               </div>
 
               {remaining === 0 && (
-                <div className="mt-4 text-sm sm:text-lg font-bold text-amber-600 animate-pulse tracking-wide uppercase">
-                  Rating Closed · Finalizing audience tally…
+                <div className="mt-4 text-base sm:text-xl font-heading tracking-wide uppercase text-[#FFC94A] animate-pulse">
+                  Rating Window Closed · Tabulating Audience Scores…
                 </div>
               )}
             </div>
 
             {/* Live Audience Engagement Metrics */}
             <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-              <div className="inline-flex items-center gap-2.5 rounded-2xl bg-slate-50 border border-slate-200 px-6 py-3 text-base sm:text-lg font-extrabold text-slate-800 shadow-sm">
-                <i className="bi bi-people-fill text-purple-600 text-lg" />
-                <span>{liveVotes} Live Ratings &amp; Likes Cast</span>
+              <div className="inline-flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/15 px-6 py-3 text-base sm:text-lg font-bold text-white shadow-md backdrop-blur-md">
+                <i className="bi bi-people-fill text-[#FFC94A] text-xl" />
+                <span className="tabular-nums font-mono">{liveVotes}</span>
+                <span>Ratings Recorded</span>
               </div>
             </div>
           </div>
         ) : (
           /* ── STANDBY / IDLE STATE (Between acts) ── */
           <div className="flex flex-col items-center justify-center space-y-8 w-full max-w-3xl animate-fade-in py-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-50 border border-amber-200 text-amber-600 shadow-lg">
+            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10 border border-white/20 text-[#FFC94A] shadow-xl backdrop-blur-md">
               <i className="bi bi-stars text-3xl animate-spin-slow" />
             </div>
 
             <div className="space-y-3">
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-purple-600">
-                Live Cultural Festival Stage
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#FFC94A]">
+                Cultural Stage Confidence Monitor
               </span>
-              <h1
-                className="text-4xl sm:text-6xl md:text-7xl font-black text-slate-900 tracking-tight"
-                style={{ fontFamily: "var(--font-bricolage)" }}
-              >
+              <h1 className="font-heading text-4xl sm:text-6xl md:text-7xl lg:text-8xl text-white tracking-wide">
                 {config?.festName ?? "Euphoria 2026"}
               </h1>
-              <p className="text-base sm:text-xl text-slate-600 font-medium max-w-xl mx-auto">
-                Stage ready · Waiting for administrator to start the next performance rating window.
+              <p className="text-base sm:text-xl text-white/80 font-medium max-w-xl mx-auto">
+                Stage ready · Waiting for console administrator to launch the next act.
               </p>
             </div>
 
             {/* Upcoming Schedule Teaser for the Audience */}
             {upcomingActs.length > 0 && (
-              <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-lg space-y-3">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <div className="w-full max-w-md rounded-2xl border border-white/15 bg-black/40 backdrop-blur-md p-5 text-left shadow-2xl space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold text-white/70 uppercase tracking-wider">
                   <span>Up Next on Stage</span>
-                  <span className="text-purple-600">{upcomingActs.length} Scheduled Acts</span>
+                  <span className="text-[#FFC94A]">{upcomingActs.length} Scheduled Acts</span>
                 </div>
                 <div className="space-y-2">
                   {upcomingActs.slice(0, 3).map((act, index) => {
@@ -290,17 +287,17 @@ export default function StageTimerProjectorPage() {
                     return (
                       <div
                         key={act.id}
-                        className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 p-3"
+                        className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#FFC94A]/20 border border-[#FFC94A]/40 text-xs font-heading font-bold text-[#FFC94A]">
                             {index + 1}
                           </span>
-                          <span className="text-sm font-bold text-slate-900 truncate">{act.name}</span>
+                          <span className="text-sm font-bold text-white truncate">{act.name}</span>
                         </div>
                         {dept && (
                           <span
-                            className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white shrink-0 ml-2"
+                            className="text-[11px] font-bold px-2.5 py-0.5 rounded-full text-white shrink-0 ml-2"
                             style={{ backgroundColor: dept.color }}
                           >
                             {dept.shortName}
@@ -317,7 +314,7 @@ export default function StageTimerProjectorPage() {
       </main>
 
       {/* Subtle Projector Footer */}
-      <footer className="relative z-20 flex items-center justify-between px-6 py-3 border-t border-slate-200 text-[11px] text-slate-400 bg-white/80">
+      <footer className="relative z-20 flex items-center justify-between px-6 sm:px-10 py-3 border-t border-white/10 text-[11px] text-white/50 bg-black/30 backdrop-blur-md">
         <span>Auditorium Projector Feed · Controlled by Admin Console</span>
         <span>Meenakshi Sundararajan Engineering College</span>
       </footer>
